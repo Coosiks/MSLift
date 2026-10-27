@@ -8,7 +8,7 @@
   <img src="https://img.shields.io/badge/Vite-6.0-646CFF?style=for-the-badge&logo=vite&logoColor=white" alt="Vite" />
   <img src="https://img.shields.io/badge/PostgreSQL-16-4169E1?style=for-the-badge&logo=postgresql&logoColor=white" alt="PostgreSQL" />
   <img src="https://img.shields.io/badge/Docker-Compose-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker" />
-  <img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="MIT License" />
+  <img src="https://img.shields.io/badge/License-All_Rights_Reserved-red?style=for-the-badge" alt="All Rights Reserved" />
 </p>
 
 <p align="center">
@@ -173,6 +173,12 @@ npm run dev
 
 ---
 
-## 📄 Лицензия
+## 📄 Лицензия и отказ от ответственности
 
-Проект распространяется под лицензией [MIT](LICENSE). Разработано [Coociks](https://github.com/Coosiks).
+### 1. Авторские права (Proprietary / All Rights Reserved)
+Проект является объектом интеллектуальной собственности и защищён авторским правом.  
+Copyright (c) 2026 [Coosiks](https://github.com/Coosiks). Все права защищены (All Rights Reserved).  
+**Запрещается** любое копирование, модификация, распространение, публикация или коммерческое использование исходного кода, алгоритмов, структуры базы данных и дизайна интерфейса без предварительного письменного разрешения автора. Проект опубликован на GitHub исключительно в целях демонстрации портфолио.
+
+### 2. Отказ от медицинской и спортивной ответственности (Health & Fitness Disclaimer)
+Все тренировочные планы, расчёты рабочих весов (1ПМ) и норм КБЖУ носят исключительно рекомендательный и ознакомительный характер. Работа с субмаксимальными и максимальными весами в пауэрлифтинге сопряжена с риском получения спортивных травм. Приложение не заменяет очную консультацию спортивного врача и контроль сертифицированного тренера. Пользователь несёт полную личную ответственность за своё здоровье и технику выполнения упражнений.
