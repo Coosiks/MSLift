@@ -10,6 +10,9 @@ import { Nutrition } from './pages/Nutrition';
 import { NutritionCalculator } from './pages/NutritionCalculator';
 import { AlertTriangle, ShieldCheck } from 'lucide-react';
 
+import { BottomNav } from './components/BottomNav';
+import { RestTimerBar } from './components/RestTimerBar';
+
 export function App() {
   const [disclaimerAccepted, setDisclaimerAccepted] = useState<boolean>(() => {
     return localStorage.getItem('mslift_disclaimer_accepted') === 'true';
@@ -26,7 +29,7 @@ export function App() {
         <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col selection:bg-indigo-500 selection:text-white transition-colors duration-200">
           <Navbar />
 
-          <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
+          <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 pb-24 md:pb-10">
             <Routes>
               <Route path="/" element={<Dashboard />} />
               <Route path="/programs" element={<Programs />} />
@@ -37,6 +40,9 @@ export function App() {
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </main>
+
+          <RestTimerBar />
+          <BottomNav />
 
           {/* First launch / Legal safety disclaimer banner */}
           {!disclaimerAccepted && (

@@ -10,6 +10,7 @@ import {
   Info
 } from 'lucide-react';
 import { api } from '../services/api';
+import { hardware } from '../services/hardware';
 import type {
   TrainingProgram,
   ProgramWeekResponse,
@@ -70,6 +71,26 @@ export const WorkoutDiary: React.FC = () => {
   const [savingWorkout, setSavingWorkout] = useState<boolean>(false);
   const [successMessage, setSuccessMessage] = useState<string>('');
   const [errorMessage, setErrorMessage] = useState<string>('');
+  const [completedSets, setCompletedSets] = useState<Record<number, boolean>>({});
+
+  // Keep screen awake during workout session
+  useEffect(() => {
+    hardware.setKeepAwake(true);
+    return () => {
+      hardware.setKeepAwake(false);
+    };
+  }, []);
+
+  const toggleCompleteSet = (idx: number, item: ProgramWeekResponse) => {
+    const nextVal = !completedSets[idx];
+    setCompletedSets((prev) => ({ ...prev, [idx]: nextVal }));
+    if (nextVal) {
+      hardware.haptic('success');
+      hardware.scheduleRestTimer(item.restSeconds || 120, item.exerciseName);
+    } else {
+      hardware.haptic('light');
+    }
+  };
 
   // Load programs, cached state, and diary history on mount
   useEffect(() => {
@@ -567,11 +588,21 @@ export const WorkoutDiary: React.FC = () => {
                 {baseTemplates.map((item, idx) => (
                   <div
                     key={idx}
-                    className="p-3.5 rounded-xl border border-slate-800 bg-slate-900/80 flex items-center justify-between"
+                    className={`p-3.5 rounded-xl border transition-all flex items-center justify-between ${
+                      completedSets[idx]
+                        ? 'border-emerald-500/50 bg-emerald-950/20 shadow-sm shadow-emerald-500/10'
+                        : 'border-slate-800 bg-slate-900/80'
+                    }`}
                   >
-                    <div>
+                    <div className="flex-1 pr-2">
                       <div className="flex items-center gap-2">
-                        <span className="font-bold text-sm text-white">{item.exerciseName}</span>
+                        <span
+                          className={`font-bold text-sm transition ${
+                            completedSets[idx] ? 'text-emerald-300 line-through' : 'text-white'
+                          }`}
+                        >
+                          {item.exerciseName}
+                        </span>
                         <span className="text-xs font-mono text-indigo-400 bg-indigo-500/10 px-1.5 py-0.5 rounded">
                           {item.intensityPercentage}%
                         </span>
@@ -582,22 +613,37 @@ export const WorkoutDiary: React.FC = () => {
                       </span>
                     </div>
 
-                    {/* Weight Input (Calculated with option to adjust actual lifted weight) */}
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-xs text-slate-400">Вес:</span>
-                      <input
-                        type="number"
-                        step="0.5"
-                        value={customBaseWeights[idx] !== undefined ? customBaseWeights[idx] : item.calculatedWeightKg}
-                        onChange={(e) =>
-                          setCustomBaseWeights({
-                            ...customBaseWeights,
-                            [idx]: Number(e.target.value)
-                          })
-                        }
-                        className="w-18 bg-slate-800 text-white font-mono font-bold text-sm px-2 py-1 rounded-lg border border-slate-700 text-right focus:outline-none focus:border-indigo-500"
-                      />
-                      <span className="text-xs text-slate-400 font-mono">кг</span>
+                    <div className="flex items-center gap-2">
+                      {/* Weight Input (Calculated with option to adjust actual lifted weight) */}
+                      <div className="flex items-center gap-1">
+                        <input
+                          type="number"
+                          step="0.5"
+                          value={customBaseWeights[idx] !== undefined ? customBaseWeights[idx] : item.calculatedWeightKg}
+                          onChange={(e) =>
+                            setCustomBaseWeights({
+                              ...customBaseWeights,
+                              [idx]: Number(e.target.value)
+                            })
+                          }
+                          className="w-16 bg-slate-800 text-white font-mono font-bold text-sm px-2 py-1.5 rounded-lg border border-slate-700 text-right focus:outline-none focus:border-indigo-500"
+                        />
+                        <span className="text-xs text-slate-400 font-mono">кг</span>
+                      </div>
+
+                      {/* Complete set button with haptic & rest timer */}
+                      <button
+                        type="button"
+                        onClick={() => toggleCompleteSet(idx, item)}
+                        title={completedSets[idx] ? 'Снять отметку' : 'Отметить подход и начать отдых'}
+                        className={`p-2 rounded-xl border transition-all cursor-pointer flex items-center justify-center shrink-0 ${
+                          completedSets[idx]
+                            ? 'bg-emerald-500 text-slate-950 border-emerald-400 shadow-md shadow-emerald-500/25 scale-105'
+                            : 'bg-slate-800 text-slate-400 border-slate-700 hover:text-white hover:border-slate-600'
+                        }`}
+                      >
+                        <CheckCircle2 className="w-4 h-4" />
+                      </button>
                     </div>
                   </div>
                 ))}

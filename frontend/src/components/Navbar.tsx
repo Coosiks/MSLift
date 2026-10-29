@@ -10,22 +10,38 @@ import {
   Flame,
   Target,
   Sun,
-  Moon
+  Moon,
+  Wifi,
+  WifiOff
 } from 'lucide-react';
 import { api } from '../services/api';
+import { storage } from '../services/storage';
+import { hardware } from '../services/hardware';
 import { useTheme } from '../context/ThemeContext';
 
 export const Navbar: React.FC = () => {
   const { theme, toggleTheme } = useTheme();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [backendOnline, setBackendOnline] = useState<boolean | null>(null);
+  const [offlineMode, setOfflineModeState] = useState<boolean>(() => storage.isOfflineMode());
+
+  const handleToggleOffline = () => {
+    hardware.haptic('medium');
+    const nextVal = !offlineMode;
+    storage.setOfflineMode(nextVal);
+    setOfflineModeState(nextVal);
+  };
 
   useEffect(() => {
+    if (offlineMode) {
+      setBackendOnline(false);
+      return;
+    }
     // Check backend connection
     api.getPrograms()
       .then(() => setBackendOnline(true))
       .catch(() => setBackendOnline(false));
-  }, []);
+  }, [offlineMode]);
 
   const navItems: { to: string; label: string; icon: any; badge?: string }[] = [
     { to: '/', label: 'Дашборд', icon: LayoutDashboard },
@@ -95,28 +111,53 @@ export const Navbar: React.FC = () => {
               )}
             </button>
 
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900 border border-slate-800 text-xs">
+            {/* Offline / Online Mode Toggle Button */}
+            <button
+              onClick={handleToggleOffline}
+              title="Нажмите для переключения режима Оффлайн/Онлайн"
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs transition cursor-pointer ${
+                offlineMode
+                  ? 'bg-amber-500/15 border-amber-500/40 text-amber-300 hover:bg-amber-500/25'
+                  : backendOnline === true
+                  ? 'bg-slate-900 border-slate-800 text-slate-300 hover:bg-slate-800'
+                  : 'bg-rose-500/15 border-rose-500/30 text-rose-300 hover:bg-rose-500/25'
+              }`}
+            >
               <span
                 className={`w-2 h-2 rounded-full ${
-                  backendOnline === true
+                  offlineMode
+                    ? 'bg-amber-400 shadow-sm shadow-amber-400/50'
+                    : backendOnline === true
                     ? 'bg-emerald-400 shadow-sm shadow-emerald-400/50 animate-pulse'
-                    : backendOnline === false
-                    ? 'bg-rose-400'
-                    : 'bg-amber-400'
+                    : 'bg-rose-400'
                 }`}
               />
-              <span className="text-slate-400 font-mono text-[11px]">
-                {backendOnline === true
-                  ? 'Сервер :8080 онлайн'
-                  : backendOnline === false
-                  ? 'Сервер оффлайн'
-                  : 'Подключение...'}
+              <span className="font-mono text-[11px] font-bold">
+                {offlineMode
+                  ? '⚡ Зал (Оффлайн)'
+                  : backendOnline === true
+                  ? 'Сервер :8080'
+                  : 'Оффлайн авто'}
               </span>
-            </div>
+            </button>
           </div>
 
-          {/* Mobile menu and theme buttons */}
+          {/* Mobile menu, offline, and theme buttons */}
           <div className="flex md:hidden items-center gap-1.5">
+            {/* Quick mobile offline button */}
+            <button
+              onClick={handleToggleOffline}
+              aria-label="Переключить режим оффлайн"
+              className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border transition flex items-center gap-1 cursor-pointer ${
+                offlineMode
+                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                  : 'bg-slate-900 text-slate-400 border-slate-800'
+              }`}
+            >
+              {offlineMode ? <WifiOff className="w-3 h-3 text-amber-400" /> : <Wifi className="w-3 h-3 text-emerald-400" />}
+              <span>{offlineMode ? 'Оффлайн' : 'Онлайн'}</span>
+            </button>
+
             <button
               onClick={toggleTheme}
               aria-label={theme === 'dark' ? 'Включить светлую тему' : 'Включить тёмную тему'}
