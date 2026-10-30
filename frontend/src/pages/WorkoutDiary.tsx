@@ -7,7 +7,8 @@ import {
   Calendar,
   CheckCircle2,
   Layers,
-  Info
+  Info,
+  RotateCcw
 } from 'lucide-react';
 import { api } from '../services/api';
 import { hardware } from '../services/hardware';
@@ -167,29 +168,48 @@ export const WorkoutDiary: React.FC = () => {
     selectedProgram?.movementCategory === 'POWERLIFTING' ||
     selectedProgram?.movementCategory === 'UNIVERSAL';
 
-  const loadDayWorkout = async (progId: string, week: number, day: number) => {
+  const loadDayWorkout = async (
+    progId: string,
+    week: number,
+    day: number,
+    forceBench = bench1Rm,
+    forceSquat = squat1Rm,
+    forceDeadlift = deadlift1Rm,
+    forceCustom = custom1Rm
+  ) => {
     try {
       setLoadingBase(true);
+      const prog = programs.find((p) => p.id === progId);
+      const isPl = prog?.movementCategory === 'POWERLIFTING' || prog?.movementCategory === 'UNIVERSAL';
+
       let weekData: ProgramWeekResponse[];
-      if (isPowerlifting) {
+      if (isPl) {
         weekData = await api.getProgramWeek(
           progId,
           week,
           undefined,
           undefined,
-          bench1Rm,
-          squat1Rm,
-          deadlift1Rm
+          forceBench,
+          forceSquat,
+          forceDeadlift
         );
       } else {
-        weekData = await api.getProgramWeek(progId, week, undefined, custom1Rm);
+        weekData = await api.getProgramWeek(
+          progId,
+          week,
+          undefined,
+          forceCustom,
+          forceBench,
+          forceSquat,
+          forceDeadlift
+        );
       }
 
       // Filter templates belonging to the selected day
       const dayTemplates = weekData.filter((t) => t.dayNumber === day);
       setBaseTemplates(dayTemplates);
 
-      // Pre-fill custom base weights with calculated weights
+      // Pre-fill custom base weights with newly calculated weights
       const initialWeights: Record<number, number> = {};
       dayTemplates.forEach((t, i) => {
         initialWeights[i] = t.calculatedWeightKg;
@@ -319,15 +339,43 @@ export const WorkoutDiary: React.FC = () => {
     if (type === 'bench') {
       setBench1Rm(val);
       localStorage.setItem('mslift_1rm_bench', String(val));
+      if (!isPowerlifting && selectedProgram?.movementCategory === 'BENCH') {
+        setCustom1Rm(val);
+        localStorage.setItem('mslift_1rm_single', String(val));
+      }
+      loadDayWorkout(selectedProgramId, selectedWeek, selectedDay, val, squat1Rm, deadlift1Rm, val);
     } else if (type === 'squat') {
       setSquat1Rm(val);
       localStorage.setItem('mslift_1rm_squat', String(val));
+      if (!isPowerlifting && selectedProgram?.movementCategory === 'SQUAT') {
+        setCustom1Rm(val);
+        localStorage.setItem('mslift_1rm_single', String(val));
+      }
+      loadDayWorkout(selectedProgramId, selectedWeek, selectedDay, bench1Rm, val, deadlift1Rm, val);
     } else if (type === 'deadlift') {
       setDeadlift1Rm(val);
       localStorage.setItem('mslift_1rm_deadlift', String(val));
+      if (!isPowerlifting && selectedProgram?.movementCategory === 'DEADLIFT') {
+        setCustom1Rm(val);
+        localStorage.setItem('mslift_1rm_single', String(val));
+      }
+      loadDayWorkout(selectedProgramId, selectedWeek, selectedDay, bench1Rm, squat1Rm, val, val);
     } else {
       setCustom1Rm(val);
       localStorage.setItem('mslift_1rm_single', String(val));
+      if (selectedProgram?.movementCategory === 'BENCH') {
+        setBench1Rm(val);
+        localStorage.setItem('mslift_1rm_bench', String(val));
+      }
+      if (selectedProgram?.movementCategory === 'SQUAT') {
+        setSquat1Rm(val);
+        localStorage.setItem('mslift_1rm_squat', String(val));
+      }
+      if (selectedProgram?.movementCategory === 'DEADLIFT') {
+        setDeadlift1Rm(val);
+        localStorage.setItem('mslift_1rm_deadlift', String(val));
+      }
+      loadDayWorkout(selectedProgramId, selectedWeek, selectedDay, val, val, val, val);
     }
   };
 
@@ -415,9 +463,18 @@ export const WorkoutDiary: React.FC = () => {
               <select
                 value={selectedProgramId}
                 onChange={(e) => {
-                  setSelectedProgramId(e.target.value);
+                  const newProgId = e.target.value;
+                  setSelectedProgramId(newProgId);
                   setSelectedWeek(1);
                   setSelectedDay(1);
+                  const p = programs.find((pr) => pr.id === newProgId);
+                  let c1rm = custom1Rm;
+                  if (p) {
+                    if (p.movementCategory === 'BENCH') { c1rm = bench1Rm; setCustom1Rm(bench1Rm); }
+                    else if (p.movementCategory === 'SQUAT') { c1rm = squat1Rm; setCustom1Rm(squat1Rm); }
+                    else if (p.movementCategory === 'DEADLIFT') { c1rm = deadlift1Rm; setCustom1Rm(deadlift1Rm); }
+                  }
+                  loadDayWorkout(newProgId, 1, 1, bench1Rm, squat1Rm, deadlift1Rm, c1rm);
                 }}
                 className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-xl text-white font-medium text-sm focus:outline-none focus:border-indigo-500 cursor-pointer"
               >
@@ -488,9 +545,24 @@ export const WorkoutDiary: React.FC = () => {
             {/* 1RM Inputs for calculations */}
             {selectedProgram && (
               <div className="pt-3 border-t border-slate-800/80">
-                <span className="block text-xs font-semibold text-slate-400 mb-2">
-                  Ваши рабочие 1ПМ для расчета весов:
-                </span>
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <span className="block text-xs font-semibold text-slate-400">
+                    Ваши рабочие 1ПМ для расчета весов:
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      loadDayWorkout(selectedProgramId, selectedWeek, selectedDay, bench1Rm, squat1Rm, deadlift1Rm, custom1Rm);
+                      hardware.haptic('success');
+                      setSuccessMessage('Веса в дневнике успешно пересчитаны!');
+                      setTimeout(() => setSuccessMessage(''), 3000);
+                    }}
+                    className="px-3 py-1 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white rounded-lg text-xs font-bold transition flex items-center gap-1.5 shadow-md shadow-indigo-600/30 cursor-pointer"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    <span>Пересчитать веса</span>
+                  </button>
+                </div>
                 {isPowerlifting ? (
                   <div className="grid grid-cols-3 gap-2">
                     <div className="bg-slate-900/90 p-2 rounded-xl border border-slate-800">

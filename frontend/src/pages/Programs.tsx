@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import {
   Flame,
   Info,
@@ -19,6 +19,7 @@ import type { TrainingProgram, ProgramWeekResponse } from '../types';
 type MovementFilter = 'ALL' | 'POWERLIFTING' | 'BENCH' | 'SQUAT' | 'DEADLIFT';
 
 export const Programs: React.FC = () => {
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [programs, setPrograms] = useState<TrainingProgram[]>([]);
   const [loading, setLoading] = useState(true);
@@ -127,7 +128,15 @@ export const Programs: React.FC = () => {
           deadliftRm
         );
       } else {
-        data = await api.getProgramWeek(prog.id, week, undefined, singleRm);
+        data = await api.getProgramWeek(
+          prog.id,
+          week,
+          undefined,
+          singleRm,
+          benchRm,
+          squatRm,
+          deadliftRm
+        );
       }
       setWeekData(data);
     } catch (err) {
@@ -141,14 +150,33 @@ export const Programs: React.FC = () => {
     setSelectedProgram(prog);
     setSelectedWeek(1);
 
-    // Set intelligent default 1RM based on movement category
+    // Load saved 1RMs from localStorage if available
+    const savedBench = localStorage.getItem('mslift_1rm_bench');
+    const savedSquat = localStorage.getItem('mslift_1rm_squat');
+    const savedDeadlift = localStorage.getItem('mslift_1rm_deadlift');
+    const savedSingle = localStorage.getItem('mslift_1rm_single');
+
+    const b = savedBench ? Number(savedBench) : 100;
+    const s = savedSquat ? Number(savedSquat) : 140;
+    const d = savedDeadlift ? Number(savedDeadlift) : 160;
+    let sgl = 100;
+
     if (prog.movementCategory === 'SQUAT') {
-      setUserOneRm(140);
+      sgl = savedSquat ? Number(savedSquat) : (savedSingle ? Number(savedSingle) : 140);
     } else if (prog.movementCategory === 'DEADLIFT') {
-      setUserOneRm(160);
+      sgl = savedDeadlift ? Number(savedDeadlift) : (savedSingle ? Number(savedSingle) : 160);
     } else if (prog.movementCategory === 'BENCH') {
-      setUserOneRm(100);
+      sgl = savedBench ? Number(savedBench) : (savedSingle ? Number(savedSingle) : 100);
+    } else if (savedSingle) {
+      sgl = Number(savedSingle);
     }
+
+    setUserBenchOneRm(b);
+    setUserSquatOneRm(s);
+    setUserDeadliftOneRm(d);
+    setUserOneRm(sgl);
+
+    loadCurrentWeekData(prog, 1, s, b, d, sgl);
 
     if (updateUrl) {
       setSearchParams({ program: prog.id });
@@ -164,6 +192,14 @@ export const Programs: React.FC = () => {
   const handleRecalculate = (e: React.FormEvent) => {
     e.preventDefault();
     if (selectedProgram) {
+      // Save 1RMs to localStorage so other pages (like WorkoutDiary) immediately inherit them!
+      localStorage.setItem('mslift_1rm_bench', String(userBenchOneRm));
+      localStorage.setItem('mslift_1rm_squat', String(userSquatOneRm));
+      localStorage.setItem('mslift_1rm_deadlift', String(userDeadliftOneRm));
+      localStorage.setItem('mslift_1rm_single', String(userOneRm));
+      localStorage.setItem('mslift_diary_prog_id', selectedProgram.id);
+      localStorage.setItem('mslift_diary_week', String(selectedWeek));
+
       loadCurrentWeekData(
         selectedProgram,
         selectedWeek,
@@ -173,6 +209,17 @@ export const Programs: React.FC = () => {
         userOneRm
       );
     }
+  };
+
+  const handleSelectForDiary = () => {
+    if (!selectedProgram) return;
+    localStorage.setItem('mslift_diary_prog_id', selectedProgram.id);
+    localStorage.setItem('mslift_diary_week', String(selectedWeek));
+    localStorage.setItem('mslift_1rm_bench', String(userBenchOneRm));
+    localStorage.setItem('mslift_1rm_squat', String(userSquatOneRm));
+    localStorage.setItem('mslift_1rm_deadlift', String(userDeadliftOneRm));
+    localStorage.setItem('mslift_1rm_single', String(userOneRm));
+    navigate('/diary');
   };
 
   // Helper: round weight to 2.5 kg plates
@@ -603,9 +650,20 @@ export const Programs: React.FC = () => {
 
               <button
                 type="submit"
+                onClick={handleRecalculate}
                 className="px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white rounded-xl text-xs font-bold transition shadow-md shadow-indigo-600/25 cursor-pointer"
               >
                 Пересчитать
+              </button>
+
+              <button
+                type="button"
+                onClick={handleSelectForDiary}
+                className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition shadow-md shadow-emerald-600/25 flex items-center gap-1.5 cursor-pointer"
+                title="Перейти к тренировке по этой программе в Дневник"
+              >
+                <span>В дневник</span>
+                <ArrowRight className="w-4 h-4" />
               </button>
             </form>
           </div>
@@ -723,7 +781,7 @@ export const Programs: React.FC = () => {
                           return (
                             <div
                               key={idx}
-                              className="flex items-center justify-between p-3.5 rounded-xl border border-slate-800/90 bg-slate-900/70 hover:border-slate-750 transition-all"
+                              className="flex items-center justify-between p-3.5 rounded-xl border border-slate-800/90 bg-slate-900/70 hover:border-slate-750 transition-all program-exercise-card"
                             >
                               <div className="flex items-center gap-3">
                                 <div>

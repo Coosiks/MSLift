@@ -305,7 +305,7 @@ export const Nutrition: React.FC = () => {
     if (!id) return;
     try {
       try {
-        await api.deleteNutritionEntry(id);
+        await api.deleteNutritionEntry(id, entryDate);
       } catch (e) {
         console.warn('Backend delete failed, removing locally:', e);
       }

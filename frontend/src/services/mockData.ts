@@ -59,42 +59,11 @@ export const MOCK_FOOD_PRODUCTS: FoodProduct[] = [
 ];
 
 export const MOCK_DAILY_NUTRITION: DailyNutritionResponse = {
-  entries: [
-    {
-      id: 'mock-nut-1',
-      productName: 'Овсяные хлопья Геркулес (каша)',
-      weightGrams: 80,
-      calories: 281,
-      protein: 9.8,
-      fat: 5.0,
-      carbs: 49.4,
-      mealType: 'Завтрак'
-    },
-    {
-      id: 'mock-nut-2',
-      productName: 'Куриное филе грудки запеченное',
-      weightGrams: 200,
-      calories: 226,
-      protein: 47.2,
-      fat: 3.8,
-      carbs: 0.8,
-      mealType: 'Обед'
-    },
-    {
-      id: 'mock-nut-3',
-      productName: 'Творог 5% с бананом',
-      weightGrams: 250,
-      calories: 302,
-      protein: 40.0,
-      fat: 12.5,
-      carbs: 7.5,
-      mealType: 'Ужин'
-    }
-  ],
-  totalCalories: 809,
-  totalProtein: 97.0,
-  totalFat: 21.3,
-  totalCarbs: 57.7
+  entries: [],
+  totalCalories: 0,
+  totalProtein: 0,
+  totalFat: 0,
+  totalCarbs: 0
 };
 
 function roundToStep(val: number, step = 2.5): number {
@@ -104,18 +73,35 @@ function roundToStep(val: number, step = 2.5): number {
 export function generateMockProgramWeek(
   programId: string,
   weekNumber: number,
-  bench1Rm = 100,
-  squat1Rm = 140,
-  deadlift1Rm = 160
+  bench1Rm?: number,
+  squat1Rm?: number,
+  deadlift1Rm?: number,
+  customOneRm?: number
 ): ProgramWeekResponse[] {
-  const b = bench1Rm || 100;
-  const s = squat1Rm || 140;
-  const d = deadlift1Rm || 160;
-
   // Find in our full database
   const found = ALL_STORED_PROGRAMS.find(
     (p) => p.id === programId || p.name.toLowerCase().includes(programId.toLowerCase())
   );
+
+  const cat = found?.movementCategory || 'POWERLIFTING';
+
+  let b = bench1Rm && bench1Rm > 0 ? bench1Rm : 100;
+  let s = squat1Rm && squat1Rm > 0 ? squat1Rm : 140;
+  let d = deadlift1Rm && deadlift1Rm > 0 ? deadlift1Rm : 160;
+
+  if (customOneRm && customOneRm > 0) {
+    if (cat === 'BENCH') {
+      b = customOneRm;
+    } else if (cat === 'SQUAT') {
+      s = customOneRm;
+    } else if (cat === 'DEADLIFT') {
+      d = customOneRm;
+    } else {
+      b = customOneRm;
+      s = Math.round(customOneRm * 1.35);
+      d = Math.round(customOneRm * 1.55);
+    }
+  }
 
   if (found && found.templates && found.templates.length > 0) {
     const weekTemplates = found.templates.filter((t) => t.weekNumber === weekNumber);
@@ -127,6 +113,8 @@ export function generateMockProgramWeek(
           base1Rm = s;
         } else if (lowerName.includes('тяг') || lowerName.includes('deadlift')) {
           base1Rm = d;
+        } else if (lowerName.includes('жим') || lowerName.includes('bench')) {
+          base1Rm = b;
         }
 
         const calculatedWeightKg = roundToStep(base1Rm * (t.intensityPercentage / 100));

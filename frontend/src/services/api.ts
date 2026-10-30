@@ -3,7 +3,6 @@ import {
   MOCK_EXERCISES,
   MOCK_PROGRAMS,
   MOCK_FOOD_PRODUCTS,
-  MOCK_DAILY_NUTRITION,
   generateMockProgramWeek
 } from './mockData';
 import { storage } from './storage';
@@ -60,6 +59,31 @@ async function getLocalSets(): Promise<WorkoutSetResponse[]> {
 
 async function saveLocalSets(sets: WorkoutSetResponse[]): Promise<void> {
   await storage.set('mslift_local_sets', JSON.stringify(sets));
+}
+
+// Helpers for date-specific local nutrition
+async function getNutritionForDate(dateStr: string): Promise<DailyNutritionResponse> {
+  const key = `mslift_nutrition_${dateStr}`;
+  const raw = await storage.get(key);
+  if (raw) {
+    try {
+      return JSON.parse(raw);
+    } catch {
+      // fallback
+    }
+  }
+  return {
+    entries: [],
+    totalCalories: 0,
+    totalProtein: 0,
+    totalFat: 0,
+    totalCarbs: 0
+  };
+}
+
+async function saveNutritionForDate(dateStr: string, data: DailyNutritionResponse): Promise<void> {
+  const key = `mslift_nutrition_${dateStr}`;
+  await storage.set(key, JSON.stringify(data));
 }
 
 export const api = {
@@ -193,15 +217,8 @@ export const api = {
   },
 
   addNutritionEntry: async (data: NutritionEntryRequest): Promise<NutritionEntryDto> => {
-    if (!storage.isOfflineMode()) {
-      try {
-        const res = await client.post<NutritionEntryDto>('/nutrition/entries', data);
-        return res.data;
-      } catch (e) {
-        // Fallback
-      }
-    }
-    return {
+    const entryDate = data.entryDate || new Date().toISOString().split('T')[0];
+    const newEntry: NutritionEntryDto = {
       id: Math.random().toString(36).substring(2, 9),
       productName: data.foodName || 'Продукт',
       weightGrams: data.weightGrams,
@@ -211,23 +228,57 @@ export const api = {
       carbs: data.carbs || 0,
       mealType: data.mealType || 'Перекус'
     };
-  },
 
-  getDailyNutrition: async (date?: string): Promise<DailyNutritionResponse> => {
+    // Persist to local storage for this specific date
+    const dayData = await getNutritionForDate(entryDate);
+    dayData.entries.unshift(newEntry);
+    dayData.totalCalories = Math.round(dayData.entries.reduce((sum, e) => sum + (e.calories || 0), 0));
+    dayData.totalProtein = Math.round(dayData.entries.reduce((sum, e) => sum + (e.protein || 0), 0) * 10) / 10;
+    dayData.totalFat = Math.round(dayData.entries.reduce((sum, e) => sum + (e.fat || 0), 0) * 10) / 10;
+    dayData.totalCarbs = Math.round(dayData.entries.reduce((sum, e) => sum + (e.carbs || 0), 0) * 10) / 10;
+    await saveNutritionForDate(entryDate, dayData);
+
     if (!storage.isOfflineMode()) {
       try {
-        const res = await client.get<DailyNutritionResponse>('/nutrition/daily', {
-          params: date ? { date } : {},
-        });
+        const res = await client.post<NutritionEntryDto>('/nutrition/entries', data);
         return res.data;
       } catch (e) {
         // Fallback
       }
     }
-    return MOCK_DAILY_NUTRITION;
+    return newEntry;
   },
 
-  deleteNutritionEntry: async (id: string): Promise<void> => {
+  getDailyNutrition: async (date?: string): Promise<DailyNutritionResponse> => {
+    const entryDate = date || new Date().toISOString().split('T')[0];
+    const localDayData = await getNutritionForDate(entryDate);
+
+    if (!storage.isOfflineMode()) {
+      try {
+        const res = await client.get<DailyNutritionResponse>('/nutrition/daily', {
+          params: date ? { date } : {},
+        });
+        if (res.data && res.data.entries) {
+          await saveNutritionForDate(entryDate, res.data);
+          return res.data;
+        }
+      } catch (e) {
+        // Fallback
+      }
+    }
+    return localDayData;
+  },
+
+  deleteNutritionEntry: async (id: string, date?: string): Promise<void> => {
+    const entryDate = date || new Date().toISOString().split('T')[0];
+    const dayData = await getNutritionForDate(entryDate);
+    dayData.entries = dayData.entries.filter((e) => e.id !== id);
+    dayData.totalCalories = Math.round(dayData.entries.reduce((sum, e) => sum + (e.calories || 0), 0));
+    dayData.totalProtein = Math.round(dayData.entries.reduce((sum, e) => sum + (e.protein || 0), 0) * 10) / 10;
+    dayData.totalFat = Math.round(dayData.entries.reduce((sum, e) => sum + (e.fat || 0), 0) * 10) / 10;
+    dayData.totalCarbs = Math.round(dayData.entries.reduce((sum, e) => sum + (e.carbs || 0), 0) * 10) / 10;
+    await saveNutritionForDate(entryDate, dayData);
+
     if (!storage.isOfflineMode()) {
       try {
         await client.delete(`/nutrition/entries/${id}`);
@@ -292,7 +343,7 @@ export const api = {
         // Fallback
       }
     }
-    return generateMockProgramWeek(programId, weekNumber, bench1Rm, squat1Rm, deadlift1Rm);
+    return generateMockProgramWeek(programId, weekNumber, bench1Rm, squat1Rm, deadlift1Rm, customOneRm);
   },
 
   getFullProgram: async (
@@ -320,7 +371,7 @@ export const api = {
         // Fallback
       }
     }
-    return generateMockProgramWeek(programId, 1, bench1Rm, squat1Rm, deadlift1Rm);
+    return generateMockProgramWeek(programId, 1, bench1Rm, squat1Rm, deadlift1Rm, customOneRm);
   },
 
   // --- Training Diary with Program & Accessories ---

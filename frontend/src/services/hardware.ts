@@ -44,6 +44,35 @@ export const hardware = {
   },
 
   /**
+   * Мощная вибросигнализация завершения таймера отдыха (серия длинных импульсов вибромотора)
+   */
+  strongTimerVibrate: async () => {
+    try {
+      // 1. Web Vibration API pattern if supported
+      if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+        navigator.vibrate([800, 200, 800, 200, 1000]);
+      }
+
+      // 2. Capacitor Haptics motor vibration (duration in ms)
+      if (Capacitor.isPluginAvailable('Haptics')) {
+        await Haptics.vibrate({ duration: 800 });
+        setTimeout(async () => {
+          try {
+            await Haptics.vibrate({ duration: 800 });
+          } catch {}
+        }, 1000);
+        setTimeout(async () => {
+          try {
+            await Haptics.vibrate({ duration: 1000 });
+          } catch {}
+        }, 2000);
+      }
+    } catch (e) {
+      console.warn('Vibration error:', e);
+    }
+  },
+
+  /**
    * Запуск таймера отдыха между подходами (фоновый пуш + вибрация)
    */
   scheduleRestTimer: async (seconds: number, exerciseName?: string): Promise<number> => {
@@ -52,6 +81,21 @@ export const hardware = {
       if (!Capacitor.isPluginAvailable('LocalNotifications')) return notificationId;
 
       await hardware.requestNotificationPermission();
+
+      // Configure Android notification channel with high priority vibration
+      try {
+        await LocalNotifications.createChannel({
+          id: 'rest-timer-channel',
+          name: 'Таймер отдыха MSLift',
+          description: 'Оповещения об окончании времени отдыха между подходами',
+          importance: 5,
+          visibility: 1,
+          vibration: true,
+          lights: true
+        });
+      } catch {
+        // Channel already exists or not supported
+      }
 
       // Отменяем предыдущие таймеры
       await LocalNotifications.cancel({ notifications: [{ id: 1001 }] });
@@ -64,6 +108,7 @@ export const hardware = {
             id: 1001,
             title: '⏰ MSLift: Время отдыха истекло!',
             body: exerciseName ? `${exerciseName}: пора на следующий подход!` : 'Пора на помост! Удачного подхода!',
+            channelId: 'rest-timer-channel',
             schedule: { at: scheduleDate },
             sound: undefined,
             actionTypeId: '',

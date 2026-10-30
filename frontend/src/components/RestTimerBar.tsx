@@ -16,10 +16,8 @@ export const RestTimerBar: React.FC = () => {
       }, 1000);
     } else if (isRunning && secondsLeft === 0) {
       setIsRunning(false);
-      // Таймер завершился
-      hardware.haptic('heavy');
-      // Второе вибро через 400мс
-      setTimeout(() => hardware.haptic('heavy'), 400);
+      // Таймер завершился — мощная многократная вибрация вибромотора
+      hardware.strongTimerVibrate();
     }
 
     return () => {

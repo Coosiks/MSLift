@@ -113,8 +113,11 @@ html.light .bg-slate-900 {
   background-color: #ffffff !important;
 }
 html.light .bg-slate-900\/90,
-html.light .bg-slate-900\/80 {
+html.light .bg-slate-900\/80,
+html.light .bg-slate-900\/70,
+html.light .program-exercise-card {
   background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
 }
 html.light .bg-slate-900\/60,
 html.light .bg-slate-900\/50,
@@ -150,10 +153,13 @@ html.light .hover\:bg-slate-700:hover {
 html.light .border-slate-900,
 html.light .border-slate-900\/80,
 html.light .border-slate-800,
+html.light .border-slate-800\/90,
 html.light .border-slate-800\/80,
 html.light .border-slate-800\/60,
 html.light .border-slate-800\/50,
-html.light .border-slate-800\/40 {
+html.light .border-slate-800\/40,
+html.light .hover\:border-slate-750:hover,
+html.light .program-exercise-card:hover {
   border-color: #e2e8f0 !important;
 }
 html.light .border-slate-700,
@@ -171,6 +177,36 @@ html.light .text-white {
 }
 html.light .text-slate-100 {
   color: #0f172a !important;
+}
+
+/* Program exercise card in light mode */
+html.light .program-exercise-card {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+}
+html.light .program-exercise-card:hover {
+  background-color: #f8fafc !important;
+  border-color: #cbd5e1 !important;
+}
+html.light .program-exercise-card .text-white {
+  color: #0f172a !important;
+}
+html.light .program-exercise-card .text-slate-500 {
+  color: #64748b !important;
+}
+html.light .program-exercise-card .text-slate-400 {
+  color: #475569 !important;
+}
+
+/* Inputs and Selects in light mode */
+html.light input[type="number"],
+html.light input[type="text"],
+html.light input[type="date"],
+html.light select {
+  color: #0f172a !important;
+  background-color: #ffffff !important;
+  border-color: #cbd5e1 !important;
 }
 html.light .text-slate-200 {
   color: #1e293b !important;
