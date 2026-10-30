@@ -384,7 +384,7 @@ export const Programs: React.FC = () => {
           </div>
 
           {/* Quick Counter */}
-          <div className="flex items-center gap-3 bg-slate-900/90 p-3.5 rounded-xl border border-slate-800">
+          <div className="self-end ml-auto flex items-center gap-3 bg-slate-900/90 p-3.5 rounded-xl border border-slate-800 shrink-0">
             <div className="text-right">
               <span className="block text-[11px] text-slate-400">Всего программ в базе</span>
               <span className="text-2xl font-black text-white font-mono">{programs.length}</span>
