@@ -36,10 +36,31 @@ const POPULAR_ACCESSORIES = [
   'Планка с блином'
 ];
 
+// Popular base exercises for free workout builder
+const POPULAR_BASE_EXERCISES = [
+  'Приседания со штангой',
+  'Жим штанги лёжа',
+  'Становая тяга',
+  'Жим штанги стоя (Армейский)',
+  'Жим лёжа узким хватом',
+  'Тяга штанги в наклоне',
+  'Фронтальные приседания',
+  'Подтягивания с весом',
+  'Брусья с весом'
+];
+
+const CUSTOM_FREE_PROGRAM: TrainingProgram = {
+  id: 'custom-free-workout',
+  name: 'Свободная тренировка (Свой план / Без программы)',
+  description: 'Индивидуальная тренировка без шаблона. Вносите любые базовые и подсобные упражнения, подходы, повторения и веса вручную.',
+  durationWeeks: 52,
+  movementCategory: 'UNIVERSAL'
+};
+
 export const WorkoutDiary: React.FC = () => {
   // Programs & Selection
   const [programs, setPrograms] = useState<TrainingProgram[]>([]);
-  const [selectedProgramId, setSelectedProgramId] = useState<string>('');
+  const [selectedProgramId, setSelectedProgramId] = useState<string>('custom-free-workout');
   const [selectedWeek, setSelectedWeek] = useState<number>(1);
   const [selectedDay, setSelectedDay] = useState<number>(1);
   const [workoutDate, setWorkoutDate] = useState<string>(
@@ -57,6 +78,21 @@ export const WorkoutDiary: React.FC = () => {
   const [baseTemplates, setBaseTemplates] = useState<ProgramWeekResponse[]>([]);
   const [customBaseWeights, setCustomBaseWeights] = useState<Record<number, number>>({});
   const [loadingBase, setLoadingBase] = useState<boolean>(false);
+
+  // Custom Base Exercises for Free Workout ("Свободная тренировка")
+  const [customBaseList, setCustomBaseList] = useState<BaseExerciseItem[]>(() => {
+    try {
+      const saved = localStorage.getItem('mslift_diary_custom_base');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [customBaseName, setCustomBaseName] = useState<string>('');
+  const [customBaseSets, setCustomBaseSets] = useState<number>(4);
+  const [customBaseReps, setCustomBaseReps] = useState<number>(6);
+  const [customBaseWeight, setCustomBaseWeight] = useState<string>('100');
+  const [customCompletedSets, setCustomCompletedSets] = useState<Record<number, boolean>>({});
 
   // Accessory Exercises for current workout
   const [accessories, setAccessories] = useState<AccessoryExerciseItem[]>([]);
@@ -91,6 +127,51 @@ export const WorkoutDiary: React.FC = () => {
     } else {
       hardware.haptic('light');
     }
+  };
+
+  const toggleCompleteCustomSet = (idx: number, item: BaseExerciseItem) => {
+    const nextVal = !customCompletedSets[idx];
+    setCustomCompletedSets((prev) => ({ ...prev, [idx]: nextVal }));
+    if (nextVal) {
+      hardware.haptic('success');
+      hardware.scheduleRestTimer(120, item.exerciseName);
+    } else {
+      hardware.haptic('light');
+    }
+  };
+
+  const handleAddCustomBase = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!customBaseName.trim()) return;
+
+    const newItem: BaseExerciseItem = {
+      exerciseName: customBaseName.trim(),
+      sets: Number(customBaseSets) || 3,
+      reps: Number(customBaseReps) || 6,
+      intensityPercentage: 100,
+      calculatedWeightKg: Number(customBaseWeight) || 0
+    };
+
+    const updated = [...customBaseList, newItem];
+    setCustomBaseList(updated);
+    localStorage.setItem('mslift_diary_custom_base', JSON.stringify(updated));
+    setCustomBaseName('');
+    hardware.haptic('success');
+  };
+
+  const handleRemoveCustomBase = (idxToRemove: number) => {
+    const updated = customBaseList.filter((_, idx) => idx !== idxToRemove);
+    setCustomBaseList(updated);
+    localStorage.setItem('mslift_diary_custom_base', JSON.stringify(updated));
+    hardware.haptic('light');
+  };
+
+  const handleUpdateCustomBaseWeight = (idx: number, newWeight: number) => {
+    const updated = customBaseList.map((item, i) =>
+      i === idx ? { ...item, calculatedWeightKg: newWeight } : item
+    );
+    setCustomBaseList(updated);
+    localStorage.setItem('mslift_diary_custom_base', JSON.stringify(updated));
   };
 
   // Load programs, cached state, and diary history on mount
@@ -129,12 +210,13 @@ export const WorkoutDiary: React.FC = () => {
   const loadPrograms = async () => {
     try {
       const data = await api.getPrograms();
-      setPrograms(data);
-      if (data.length > 0 && !selectedProgramId) {
+      const combined = [CUSTOM_FREE_PROGRAM, ...data.filter((p) => p.id !== CUSTOM_FREE_PROGRAM.id)];
+      setPrograms(combined);
+      if (combined.length > 0) {
         const savedProgId = localStorage.getItem('mslift_diary_prog_id');
         const defaultProg = savedProgId
-          ? data.find((p) => p.id === savedProgId) || data[0]
-          : data[0];
+          ? combined.find((p) => p.id === savedProgId) || combined[0]
+          : combined[0];
         setSelectedProgramId(defaultProg.id);
       }
     } catch (err) {
@@ -163,7 +245,8 @@ export const WorkoutDiary: React.FC = () => {
     }
   };
 
-  const selectedProgram = programs.find((p) => p.id === selectedProgramId) || null;
+  const selectedProgram = programs.find((p) => p.id === selectedProgramId) || CUSTOM_FREE_PROGRAM;
+  const isCustomWorkout = selectedProgramId === 'custom-free-workout';
   const isPowerlifting =
     selectedProgram?.movementCategory === 'POWERLIFTING' ||
     selectedProgram?.movementCategory === 'UNIVERSAL';
@@ -177,6 +260,11 @@ export const WorkoutDiary: React.FC = () => {
     forceDeadlift = deadlift1Rm,
     forceCustom = custom1Rm
   ) => {
+    if (progId === 'custom-free-workout') {
+      setBaseTemplates([]);
+      setLoadingBase(false);
+      return;
+    }
     try {
       setLoadingBase(true);
       const prog = programs.find((p) => p.id === progId);
@@ -256,17 +344,22 @@ export const WorkoutDiary: React.FC = () => {
       setErrorMessage('');
 
       // Form base exercises payload
-      const baseExercisesPayload: BaseExerciseItem[] = baseTemplates.map((t, idx) => ({
-        exerciseName: t.exerciseName,
-        sets: t.sets,
-        reps: t.reps,
-        intensityPercentage: t.intensityPercentage,
-        calculatedWeightKg: customBaseWeights[idx] !== undefined ? customBaseWeights[idx] : t.calculatedWeightKg
-      }));
+      let baseExercisesPayload: BaseExerciseItem[];
+      if (selectedProgramId === 'custom-free-workout') {
+        baseExercisesPayload = customBaseList;
+      } else {
+        baseExercisesPayload = baseTemplates.map((t, idx) => ({
+          exerciseName: t.exerciseName,
+          sets: t.sets,
+          reps: t.reps,
+          intensityPercentage: t.intensityPercentage,
+          calculatedWeightKg: customBaseWeights[idx] !== undefined ? customBaseWeights[idx] : t.calculatedWeightKg
+        }));
+      }
 
       const requestPayload = {
         programId: selectedProgram.id,
-        programName: selectedProgram.name,
+        programName: selectedProgramId === 'custom-free-workout' ? 'Свободная тренировка (Свой план)' : selectedProgram.name,
         weekNumber: selectedWeek,
         dayNumber: selectedDay,
         workoutDate: workoutDate,
@@ -295,21 +388,31 @@ export const WorkoutDiary: React.FC = () => {
       localStorage.setItem('mslift_diary_cache', JSON.stringify(updatedHistory));
 
       setSuccessMessage(
-        `Тренировка дня успешно записана в дневник! (Неделя ${selectedWeek}, День ${selectedDay})`
+        `Тренировка успешно записана в дневник! (${selectedProgramId === 'custom-free-workout' ? 'Свободный план' : selectedProgram.name}, День ${selectedDay})`
       );
       setTimeout(() => setSuccessMessage(''), 5000);
 
-      // Reset accessories and notes for the next workout
+      // Reset accessories, custom base, and notes for the next workout
       setAccessories([]);
       setNotes('');
-
-      // Advance to next day if available
-      const maxDays = Math.max(...baseTemplates.map((t) => t.dayNumber), 3);
-      if (selectedDay < maxDays) {
-        setSelectedDay((prev) => prev + 1);
-      } else if (selectedWeek < selectedProgram.durationWeeks) {
-        setSelectedWeek((prev) => prev + 1);
-        setSelectedDay(1);
+      if (selectedProgramId === 'custom-free-workout') {
+        setCustomBaseList([]);
+        localStorage.removeItem('mslift_diary_custom_base');
+        setCustomCompletedSets({});
+        if (selectedDay < 7) {
+          setSelectedDay((prev) => prev + 1);
+        } else {
+          setSelectedWeek((prev) => prev + 1);
+          setSelectedDay(1);
+        }
+      } else {
+        const maxDays = Math.max(...baseTemplates.map((t) => t.dayNumber), 3);
+        if (selectedDay < maxDays) {
+          setSelectedDay((prev) => prev + 1);
+        } else if (selectedWeek < selectedProgram.durationWeeks) {
+          setSelectedWeek((prev) => prev + 1);
+          setSelectedDay(1);
+        }
       }
     } catch (err: any) {
       console.error(err);
@@ -408,7 +511,7 @@ export const WorkoutDiary: React.FC = () => {
           </div>
 
           {/* Quick Counter */}
-          <div className="flex items-center gap-3 bg-slate-900/90 p-3.5 rounded-xl border border-slate-800">
+          <div className="flex items-center gap-3 bg-slate-900/90 p-3.5 rounded-xl border border-slate-800 self-end ml-auto">
             <div className="text-right">
               <span className="block text-[11px] text-slate-400">Записей в дневнике</span>
               <span className="text-2xl font-black text-white font-mono">
@@ -480,7 +583,7 @@ export const WorkoutDiary: React.FC = () => {
               >
                 {programs.map((prog) => (
                   <option key={prog.id} value={prog.id}>
-                    {prog.name} ({prog.durationWeeks} нед.)
+                    {prog.id === 'custom-free-workout' ? '⚡ ' : ''}{prog.name} {prog.id !== 'custom-free-workout' ? `(${prog.durationWeeks} нед.)` : ''}
                   </option>
                 ))}
               </select>
@@ -510,14 +613,14 @@ export const WorkoutDiary: React.FC = () => {
                 {/* Day */}
                 <div>
                   <label className="block text-xs font-semibold text-slate-400 mb-1">
-                    День тренировки:
+                    День тренировки (до 7 дн.):
                   </label>
                   <select
                     value={selectedDay}
                     onChange={(e) => setSelectedDay(Number(e.target.value))}
                     className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-white font-bold text-sm focus:outline-none focus:border-indigo-500"
                   >
-                    {[1, 2, 3, 4, 5].map((d) => (
+                    {[1, 2, 3, 4, 5, 6, 7].map((d) => (
                       <option key={d} value={d}>
                         День {d}
                       </option>
@@ -542,8 +645,8 @@ export const WorkoutDiary: React.FC = () => {
               </div>
             )}
 
-            {/* 1RM Inputs for calculations */}
-            {selectedProgram && (
+            {/* 1RM Inputs for calculations (only for fixed-formula programs) */}
+            {selectedProgram && !isCustomWorkout && (
               <div className="pt-3 border-t border-slate-800/80">
                 <div className="flex items-center justify-between gap-2 mb-2">
                   <span className="block text-xs font-semibold text-slate-400">
@@ -636,24 +739,181 @@ export const WorkoutDiary: React.FC = () => {
               <div>
                 <h3 className="text-base font-bold text-white flex items-center gap-2">
                   <Dumbbell className="w-5 h-5 text-indigo-400" />
-                  Базовые упражнения дня из программы
+                  {isCustomWorkout ? 'Базовые упражнения (Свой план)' : 'Базовые упражнения дня из программы'}
                 </h3>
                 <span className="text-xs text-slate-400">
-                  Неделя {selectedWeek} • День {selectedDay}
+                  {isCustomWorkout ? `Свободная тренировка • День ${selectedDay}` : `Неделя ${selectedWeek} • День ${selectedDay}`}
                 </span>
               </div>
               <span className="text-xs font-mono font-bold text-indigo-400 bg-indigo-500/10 px-2.5 py-1 rounded-lg border border-indigo-500/20">
-                {baseTemplates.length} {baseTemplates.length === 1 ? 'фаза' : 'подхода/фаз'}
+                {isCustomWorkout
+                  ? `${customBaseList.length} упр.`
+                  : `${baseTemplates.length} ${baseTemplates.length === 1 ? 'фаза' : 'подхода/фаз'}`}
               </span>
             </div>
 
-            {loadingBase ? (
+            {isCustomWorkout ? (
+              /* Custom Free Workout Builder & List */
+              <div className="space-y-4">
+                {/* Form to add custom base exercise */}
+                <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-800 space-y-3">
+                  <span className="text-xs font-bold text-slate-300 block">
+                    Добавить базовое упражнение в тренировку:
+                  </span>
+
+                  {/* Quick suggestions */}
+                  <div className="flex flex-wrap gap-1.5">
+                    {POPULAR_BASE_EXERCISES.map((name) => (
+                      <button
+                        key={name}
+                        type="button"
+                        onClick={() => setCustomBaseName(name)}
+                        className="text-[11px] px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 transition cursor-pointer"
+                      >
+                        {name}
+                      </button>
+                    ))}
+                  </div>
+
+                  <form onSubmit={handleAddCustomBase} className="space-y-3 pt-1">
+                    <div>
+                      <input
+                        type="text"
+                        required
+                        placeholder="Название упражнения (напр. Жим лежа, Присед...)"
+                        value={customBaseName}
+                        onChange={(e) => setCustomBaseName(e.target.value)}
+                        className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-white text-xs focus:outline-none focus:border-indigo-500"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-2">
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-400 mb-1">
+                          Подходы
+                        </label>
+                        <input
+                          type="number"
+                          min="1"
+                          value={customBaseSets}
+                          onChange={(e) => setCustomBaseSets(Number(e.target.value))}
+                          className="w-full px-3 py-1.5 bg-slate-900 border border-slate-800 rounded-lg text-white font-mono text-center text-xs focus:outline-none focus:border-indigo-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-400 mb-1">
+                          Повторения
+                        </label>
+                        <input
+                          type="number"
+                          min="1"
+                          value={customBaseReps}
+                          onChange={(e) => setCustomBaseReps(Number(e.target.value))}
+                          className="w-full px-3 py-1.5 bg-slate-900 border border-slate-800 rounded-lg text-white font-mono text-center text-xs focus:outline-none focus:border-indigo-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-400 mb-1">
+                          Вес (кг)
+                        </label>
+                        <input
+                          type="number"
+                          step="0.5"
+                          min="0"
+                          value={customBaseWeight}
+                          onChange={(e) => setCustomBaseWeight(e.target.value)}
+                          placeholder="100"
+                          className="w-full px-3 py-1.5 bg-slate-900 border border-slate-800 rounded-lg text-white font-mono text-center text-xs focus:outline-none focus:border-indigo-500"
+                        />
+                      </div>
+                    </div>
+
+                    <button
+                      type="submit"
+                      className="w-full py-2 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-md shadow-indigo-600/25 cursor-pointer"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Добавить базовое упражнение</span>
+                    </button>
+                  </form>
+                </div>
+
+                {/* List of custom base exercises */}
+                {customBaseList.length === 0 ? (
+                  <div className="p-6 text-center bg-slate-900/40 rounded-xl border border-slate-800/80 text-slate-400 text-xs">
+                    Пока нет добавленных базовых упражнений. Добавьте упражнения через форму выше или запишите только подсобку / кардио в блоке справа!
+                  </div>
+                ) : (
+                  <div className="space-y-2.5">
+                    {customBaseList.map((item, idx) => (
+                      <div
+                        key={idx}
+                        className={`p-3.5 rounded-xl border transition-all flex items-center justify-between ${
+                          customCompletedSets[idx]
+                            ? 'border-emerald-500/50 bg-emerald-950/20 shadow-sm shadow-emerald-500/10'
+                            : 'border-slate-800 bg-slate-900/80'
+                        }`}
+                      >
+                        <div className="flex-1 pr-2">
+                          <span
+                            className={`font-bold text-sm block transition ${
+                              customCompletedSets[idx] ? 'text-emerald-300 line-through' : 'text-white'
+                            }`}
+                          >
+                            {item.exerciseName}
+                          </span>
+                          <span className="text-xs text-slate-400 mt-0.5 block">
+                            {item.sets} {item.sets === 1 ? 'подход' : item.sets < 5 ? 'подхода' : 'подходов'} ×{' '}
+                            {item.reps} {item.reps === 1 ? 'повтор' : item.reps < 5 ? 'повтора' : 'повторений'}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-1">
+                            <input
+                              type="number"
+                              step="0.5"
+                              value={item.calculatedWeightKg}
+                              onChange={(e) => handleUpdateCustomBaseWeight(idx, Number(e.target.value))}
+                              className="w-16 bg-slate-800 text-white font-mono font-bold text-sm px-2 py-1.5 rounded-lg border border-slate-700 text-right focus:outline-none focus:border-indigo-500"
+                            />
+                            <span className="text-xs text-slate-400 font-mono">кг</span>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => toggleCompleteCustomSet(idx, item)}
+                            title={customCompletedSets[idx] ? 'Снять отметку' : 'Отметить подход и начать отдых'}
+                            className={`p-2 rounded-xl border transition-all cursor-pointer flex items-center justify-center shrink-0 ${
+                              customCompletedSets[idx]
+                                ? 'bg-emerald-500 text-slate-950 border-emerald-400 shadow-md shadow-emerald-500/25 scale-105'
+                                : 'bg-slate-800 text-slate-400 border-slate-700 hover:text-white hover:border-slate-600'
+                            }`}
+                          >
+                            <CheckCircle2 className="w-4 h-4" />
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveCustomBase(idx)}
+                            className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition cursor-pointer"
+                            title="Удалить упражнение"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : loadingBase ? (
               <div className="py-8 text-center text-slate-400 text-sm">
                 Загрузка упражнений программы...
               </div>
             ) : baseTemplates.length === 0 ? (
               <div className="p-6 text-center bg-slate-900/60 rounded-xl border border-slate-800 text-slate-400 text-xs">
-                На этот день по плану отдых или восстановительная пауза.
+                На этот день в программе нет базовых упражнений (день отдыха или кардио/восстановления). Вы можете записать подсобные упражнения, кардио или растяжку в блоке справа!
               </div>
             ) : (
               <div className="space-y-2.5">
@@ -889,7 +1149,12 @@ export const WorkoutDiary: React.FC = () => {
             {/* Primary Submit Button */}
             <button
               onClick={handleSaveWorkout}
-              disabled={savingWorkout || (!baseTemplates.length && !accessories.length)}
+              disabled={
+                savingWorkout ||
+                (isCustomWorkout
+                  ? !customBaseList.length && !accessories.length && !notes.trim()
+                  : !baseTemplates.length && !accessories.length && !notes.trim())
+              }
               className="w-full py-3.5 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 disabled:opacity-50 text-white rounded-xl font-extrabold text-sm transition shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2 cursor-pointer"
             >
               <CheckCircle2 className="w-5 h-5" />
@@ -1005,10 +1270,10 @@ export const WorkoutDiary: React.FC = () => {
                         {accList.map((a, idx) => (
                           <div
                             key={idx}
-                            className="text-xs bg-emerald-950/20 p-2 rounded-lg border border-emerald-500/20 flex items-center justify-between"
+                            className="text-xs bg-emerald-950/20 p-2 rounded-lg border border-emerald-500/20 flex items-center justify-between diary-accessory-card"
                           >
-                            <span className="font-semibold text-emerald-300">{a.name}</span>
-                            <span className="font-mono text-slate-300">
+                            <span className="font-semibold text-emerald-300 acc-name">{a.name}</span>
+                            <span className="font-mono text-slate-300 acc-metrics">
                               {a.sets} × {a.reps}
                               {a.weightKg ? ` • ${a.weightKg} кг` : ''}
                               {a.notes ? ` (${a.notes})` : ''}

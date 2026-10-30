@@ -67,7 +67,23 @@ async function getNutritionForDate(dateStr: string): Promise<DailyNutritionRespo
   const raw = await storage.get(key);
   if (raw) {
     try {
-      return JSON.parse(raw);
+      const parsed: DailyNutritionResponse = JSON.parse(raw);
+      // Clean out any legacy mock entries (mock-nut-*) or hardcoded dummy meals
+      const cleanedEntries = (parsed.entries || []).filter(
+        (e) => !e.id?.startsWith('mock-nut') &&
+               e.productName !== 'Овсяные хлопья Геркулес (каша)' &&
+               e.productName !== 'Куриное филе грудки запеченное' &&
+               e.productName !== 'Творог 5% с бананом'
+      );
+      if (cleanedEntries.length !== (parsed.entries || []).length) {
+        parsed.entries = cleanedEntries;
+        parsed.totalCalories = Math.round(cleanedEntries.reduce((s, e) => s + (e.calories || 0), 0));
+        parsed.totalProtein = Math.round(cleanedEntries.reduce((s, e) => s + (e.protein || 0), 0) * 10) / 10;
+        parsed.totalFat = Math.round(cleanedEntries.reduce((s, e) => s + (e.fat || 0), 0) * 10) / 10;
+        parsed.totalCarbs = Math.round(cleanedEntries.reduce((s, e) => s + (e.carbs || 0), 0) * 10) / 10;
+        await storage.set(key, JSON.stringify(parsed));
+      }
+      return parsed;
     } catch {
       // fallback
     }

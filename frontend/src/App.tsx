@@ -34,6 +34,7 @@ export function App() {
               <Route path="/" element={<Dashboard />} />
               <Route path="/programs" element={<Programs />} />
               <Route path="/workouts" element={<WorkoutDiary />} />
+              <Route path="/diary" element={<WorkoutDiary />} />
               <Route path="/calculator" element={<Calculator />} />
               <Route path="/nutrition" element={<Nutrition />} />
               <Route path="/nutrition-calculator" element={<NutritionCalculator />} />

@@ -219,7 +219,7 @@ export const Programs: React.FC = () => {
     localStorage.setItem('mslift_1rm_squat', String(userSquatOneRm));
     localStorage.setItem('mslift_1rm_deadlift', String(userDeadliftOneRm));
     localStorage.setItem('mslift_1rm_single', String(userOneRm));
-    navigate('/diary');
+    navigate('/workouts');
   };
 
   // Helper: round weight to 2.5 kg plates

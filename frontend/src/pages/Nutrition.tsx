@@ -138,7 +138,7 @@ export const Nutrition: React.FC = () => {
   // Filter category in list
   const [activeFilter, setActiveFilter] = useState<string>('ALL');
 
-  // Load user target goal from localStorage on mount
+  // Load user target goal from localStorage on mount & clean up any legacy mock nutrition data
   useEffect(() => {
     const savedTarget = localStorage.getItem('mslift_nutrition_target');
     if (savedTarget) {
@@ -148,6 +148,37 @@ export const Nutrition: React.FC = () => {
         console.error(e);
       }
     }
+
+    // Clean legacy mock nutrition items across all date keys
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('mslift_nutrition_')) {
+          const raw = localStorage.getItem(key);
+          if (raw) {
+            try {
+              const data = JSON.parse(raw);
+              if (data && Array.isArray(data.entries)) {
+                const filtered = data.entries.filter(
+                  (e: any) => !e.id?.startsWith('mock-nut') &&
+                    e.productName !== 'Овсяные хлопья Геркулес (каша)' &&
+                    e.productName !== 'Куриное филе грудки запеченное' &&
+                    e.productName !== 'Творог 5% с бананом'
+                );
+                if (filtered.length !== data.entries.length) {
+                  data.entries = filtered;
+                  data.totalCalories = Math.round(filtered.reduce((s: number, e: any) => s + (e.calories || 0), 0));
+                  data.totalProtein = Math.round(filtered.reduce((s: number, e: any) => s + (e.protein || 0), 0) * 10) / 10;
+                  data.totalFat = Math.round(filtered.reduce((s: number, e: any) => s + (e.fat || 0), 0) * 10) / 10;
+                  data.totalCarbs = Math.round(filtered.reduce((s: number, e: any) => s + (e.carbs || 0), 0) * 10) / 10;
+                  localStorage.setItem(key, JSON.stringify(data));
+                }
+              }
+            } catch {}
+          }
+        }
+      }
+    } catch {}
   }, []);
 
   // Fetch daily summary when date changes
