@@ -694,7 +694,7 @@ export const Programs: React.FC = () => {
                 onMouseMove={handleMouseMove}
                 onMouseUp={handleMouseUpOrLeave}
                 onMouseLeave={handleMouseUpOrLeave}
-                className="flex items-center gap-2.5 overflow-x-auto py-1 px-1 scrollbar-thin select-none cursor-grab active:cursor-grabbing scroll-smooth"
+                className="flex items-center gap-2.5 overflow-x-auto py-1 px-1 scrollbar-none select-none cursor-grab active:cursor-grabbing scroll-smooth"
               >
                 {Array.from({ length: selectedProgram.durationWeeks }, (_, i) => i + 1).map((week) => (
                   <button

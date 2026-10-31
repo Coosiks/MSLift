@@ -14,8 +14,7 @@ import {
   Sun,
   Moon,
   Cookie,
-  Target,
-  Scale
+  Target
 } from 'lucide-react';
 import { api } from '../services/api';
 import type {
@@ -761,8 +760,7 @@ export const Nutrition: React.FC = () => {
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
-                <Scale className="w-3.5 h-3.5" />
-                <span>На 100 г (пересчёт)</span>
+                <span>На 100 г</span>
               </button>
             </div>
 
@@ -808,15 +806,11 @@ export const Nutrition: React.FC = () => {
 
               {calcMode === 'per100g' ? (
                 /* ================= PER 100G MODE ================= */
-                <div className="space-y-3.5 animate-in fade-in duration-200">
-                  {/* Weight of portion (REQUIRED in 100g mode) */}
-                  <div className="p-3.5 bg-indigo-950/30 border border-indigo-500/30 rounded-xl space-y-1.5">
-                    <label className="block text-xs font-bold text-indigo-300 flex items-center justify-between">
-                      <span className="flex items-center gap-1.5">
-                        <Scale className="w-4 h-4 text-indigo-400" />
-                        Вес вашей порции (г) *
-                      </span>
-                      <span className="text-[10px] text-indigo-400 font-medium">Для точного пересчёта</span>
+                <div className="space-y-4 animate-in fade-in duration-200">
+                  {/* Weight in grams (REQUIRED in 100g mode) */}
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-400 mb-1.5">
+                      Вес порции (г) *
                     </label>
                     <div className="relative">
                       <input
@@ -827,76 +821,71 @@ export const Nutrition: React.FC = () => {
                         required
                         value={weightGrams}
                         onChange={(e) => setWeightGrams(e.target.value.replace(',', '.'))}
-                        placeholder="Например: 180"
-                        className="w-full px-3.5 py-2.5 bg-slate-900 border border-indigo-500/50 rounded-xl text-white font-mono font-bold text-base focus:outline-none focus:border-indigo-400"
+                        placeholder="180"
+                        className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-white font-mono text-sm focus:outline-none focus:border-indigo-500"
                       />
-                      <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-indigo-300">
-                        ГРАММ
+                      <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-500">
+                        ГР
                       </span>
                     </div>
                   </div>
 
-                  {/* 100g Macros */}
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-400 mb-1.5">
-                      Значения на 100 г продукта (с упаковки):
-                    </label>
-                    <div className="grid grid-cols-3 gap-2">
-                      <div>
-                        <label className="block text-[11px] font-bold text-indigo-400 mb-1">
-                          Белки / 100г
-                        </label>
-                        <input
-                          type="number"
-                          step="any"
-                          min="0"
-                          inputMode="decimal"
-                          value={p100}
-                          onChange={(e) => setP100(e.target.value.replace(',', '.'))}
-                          placeholder="16.5"
-                          className="w-full px-2.5 py-2 bg-slate-900 border border-slate-800 rounded-xl text-white font-mono text-center text-sm focus:outline-none focus:border-indigo-500"
-                        />
-                      </div>
+                  {/* Macros: Protein, Fat, Carbs */}
+                  <div className="grid grid-cols-3 gap-2">
+                    <div>
+                      <label className="block text-[11px] font-bold text-indigo-400 mb-1">
+                        Белки (г)
+                      </label>
+                      <input
+                        type="number"
+                        step="any"
+                        min="0"
+                        inputMode="decimal"
+                        value={p100}
+                        onChange={(e) => setP100(e.target.value.replace(',', '.'))}
+                        placeholder="16.5"
+                        className="w-full px-2.5 py-2 bg-slate-900 border border-slate-800 rounded-xl text-white font-mono text-center text-sm focus:outline-none focus:border-indigo-500"
+                      />
+                    </div>
 
-                      <div>
-                        <label className="block text-[11px] font-bold text-amber-400 mb-1">
-                          Жиры / 100г
-                        </label>
-                        <input
-                          type="number"
-                          step="any"
-                          min="0"
-                          inputMode="decimal"
-                          value={f100}
-                          onChange={(e) => setF100(e.target.value.replace(',', '.'))}
-                          placeholder="2.2"
-                          className="w-full px-2.5 py-2 bg-slate-900 border border-slate-800 rounded-xl text-white font-mono text-center text-sm focus:outline-none focus:border-amber-500"
-                        />
-                      </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-amber-400 mb-1">
+                        Жиры (г)
+                      </label>
+                      <input
+                        type="number"
+                        step="any"
+                        min="0"
+                        inputMode="decimal"
+                        value={f100}
+                        onChange={(e) => setF100(e.target.value.replace(',', '.'))}
+                        placeholder="2.2"
+                        className="w-full px-2.5 py-2 bg-slate-900 border border-slate-800 rounded-xl text-white font-mono text-center text-sm focus:outline-none focus:border-amber-500"
+                      />
+                    </div>
 
-                      <div>
-                        <label className="block text-[11px] font-bold text-cyan-400 mb-1">
-                          Углеводы / 100г
-                        </label>
-                        <input
-                          type="number"
-                          step="any"
-                          min="0"
-                          inputMode="decimal"
-                          value={c100}
-                          onChange={(e) => setC100(e.target.value.replace(',', '.'))}
-                          placeholder="3.8"
-                          className="w-full px-2.5 py-2 bg-slate-900 border border-slate-800 rounded-xl text-white font-mono text-center text-sm focus:outline-none focus:border-cyan-500"
-                        />
-                      </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-cyan-400 mb-1">
+                        Углеводы (г)
+                      </label>
+                      <input
+                        type="number"
+                        step="any"
+                        min="0"
+                        inputMode="decimal"
+                        value={c100}
+                        onChange={(e) => setC100(e.target.value.replace(',', '.'))}
+                        placeholder="3.8"
+                        className="w-full px-2.5 py-2 bg-slate-900 border border-slate-800 rounded-xl text-white font-mono text-center text-sm focus:outline-none focus:border-cyan-500"
+                      />
                     </div>
                   </div>
 
-                  {/* 100g Calories */}
+                  {/* Calories & Auto calc button */}
                   <div>
                     <div className="flex items-center justify-between mb-1.5">
                       <label className="text-xs font-semibold text-slate-400">
-                        Калории на 100 г (ккал)
+                        Калории (ккал) *
                       </label>
                       <button
                         type="button"
@@ -916,40 +905,28 @@ export const Nutrition: React.FC = () => {
                         value={cal100}
                         onChange={(e) => setCal100(e.target.value.replace(',', '.'))}
                         placeholder="Например: 101"
-                        className="w-full px-3.5 py-2 bg-slate-900 border border-slate-800 rounded-xl text-white font-mono font-bold text-sm focus:outline-none focus:border-indigo-500"
+                        className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-white font-mono font-bold text-base focus:outline-none focus:border-indigo-500"
                       />
                       <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-500">
-                        ККАЛ/100Г
+                        ККАЛ
                       </span>
                     </div>
                   </div>
 
                   {/* Live calculated results preview */}
-                  <div className="p-3.5 bg-slate-900/90 border border-slate-800 rounded-xl space-y-2">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="text-slate-300 font-bold flex items-center gap-1.5">
-                        <Scale className="w-3.5 h-3.5 text-indigo-400" />
-                        Итого в дневник {weightNum > 0 ? `на ${weightNum} г` : '(укажите вес)'}:
+                  {weightNum > 0 && (
+                    <div className="p-3 bg-slate-900/60 rounded-xl border border-slate-800 text-xs font-mono flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-slate-400">
+                      <span className="font-semibold text-slate-300">
+                        Итого на {weightNum} г:
                       </span>
-                      <span className="text-sm font-black font-mono text-amber-400">
-                        {calculatedPortionCal} <span className="text-xs font-normal text-slate-400">ккал</span>
+                      <span className="text-white">
+                        <strong className="text-amber-400">{calculatedPortionCal}</strong> ккал •{' '}
+                        Б: <strong className="text-indigo-400">{calculatedPortionP}г</strong> •{' '}
+                        Ж: <strong className="text-amber-400">{calculatedPortionF}г</strong> •{' '}
+                        У: <strong className="text-cyan-400">{calculatedPortionC}г</strong>
                       </span>
                     </div>
-                    <div className="grid grid-cols-3 gap-2 pt-1 border-t border-slate-800/80 text-center text-xs font-mono">
-                      <div className="bg-slate-950/60 p-2 rounded-lg border border-slate-800/60 shadow-xs">
-                        <span className="text-[10px] text-slate-400 block font-medium">Белки</span>
-                        <span className="text-indigo-400 font-bold">{calculatedPortionP} г</span>
-                      </div>
-                      <div className="bg-slate-950/60 p-2 rounded-lg border border-slate-800/60 shadow-xs">
-                        <span className="text-[10px] text-slate-400 block font-medium">Жиры</span>
-                        <span className="text-amber-400 font-bold">{calculatedPortionF} г</span>
-                      </div>
-                      <div className="bg-slate-950/60 p-2 rounded-lg border border-slate-800/60 shadow-xs">
-                        <span className="text-[10px] text-slate-400 block font-medium">Углеводы</span>
-                        <span className="text-cyan-400 font-bold">{calculatedPortionC} г</span>
-                      </div>
-                    </div>
-                  </div>
+                  )}
                 </div>
               ) : (
                 /* ================= DIRECT PORTION MODE ================= */
@@ -968,7 +945,7 @@ export const Nutrition: React.FC = () => {
                         value={weightGrams}
                         onChange={(e) => setWeightGrams(e.target.value.replace(',', '.'))}
                         placeholder="250"
-                        className="w-full px-3.5 py-2 bg-slate-900 border border-slate-800 rounded-xl text-white font-mono text-sm focus:outline-none focus:border-indigo-500"
+                        className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-white font-mono text-sm focus:outline-none focus:border-indigo-500"
                       />
                       <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-500">
                         ГР
