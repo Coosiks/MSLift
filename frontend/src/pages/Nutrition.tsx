@@ -810,13 +810,13 @@ export const Nutrition: React.FC = () => {
                 /* ================= PER 100G MODE ================= */
                 <div className="space-y-3.5 animate-in fade-in duration-200">
                   {/* Weight of portion (REQUIRED in 100g mode) */}
-                  <div className="p-3 bg-indigo-950/30 border border-indigo-500/30 rounded-xl space-y-1.5">
-                    <label className="block text-xs font-bold text-indigo-300 flex items-center justify-between">
+                  <div className="p-3.5 bg-indigo-50/80 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-500/30 rounded-xl space-y-1.5">
+                    <label className="block text-xs font-bold text-indigo-700 dark:text-indigo-300 flex items-center justify-between">
                       <span className="flex items-center gap-1.5">
-                        <Scale className="w-4 h-4 text-indigo-400" />
+                        <Scale className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
                         Вес вашей порции (г) *
                       </span>
-                      <span className="text-[10px] text-indigo-400 font-normal">Для точного пересчёта</span>
+                      <span className="text-[10px] text-indigo-600 dark:text-indigo-400 font-medium">Для точного пересчёта</span>
                     </label>
                     <div className="relative">
                       <input
@@ -828,9 +828,9 @@ export const Nutrition: React.FC = () => {
                         value={weightGrams}
                         onChange={(e) => setWeightGrams(e.target.value.replace(',', '.'))}
                         placeholder="Например: 180"
-                        className="w-full px-3.5 py-2.5 bg-slate-900 border border-indigo-500/50 rounded-xl text-white font-mono font-bold text-base focus:outline-none focus:border-indigo-400"
+                        className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-indigo-300 dark:border-indigo-500/50 rounded-xl text-slate-900 dark:text-white font-mono font-bold text-base focus:outline-none focus:border-indigo-500"
                       />
-                      <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-indigo-300">
+                      <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-indigo-600 dark:text-indigo-300">
                         ГРАММ
                       </span>
                     </div>
@@ -925,28 +925,28 @@ export const Nutrition: React.FC = () => {
                   </div>
 
                   {/* Live calculated results preview */}
-                  <div className="p-3 bg-slate-900/90 border border-slate-800 rounded-xl space-y-2">
+                  <div className="p-3.5 bg-slate-100/80 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 rounded-xl space-y-2">
                     <div className="flex items-center justify-between text-xs">
-                      <span className="text-slate-300 font-bold flex items-center gap-1.5">
-                        <Scale className="w-3.5 h-3.5 text-indigo-400" />
+                      <span className="text-slate-700 dark:text-slate-300 font-bold flex items-center gap-1.5">
+                        <Scale className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
                         Итого в дневник {weightNum > 0 ? `на ${weightNum} г` : '(укажите вес)'}:
                       </span>
-                      <span className="text-sm font-black font-mono text-amber-400">
-                        {calculatedPortionCal} <span className="text-xs font-normal text-slate-400">ккал</span>
+                      <span className="text-sm font-black font-mono text-amber-600 dark:text-amber-400">
+                        {calculatedPortionCal} <span className="text-xs font-normal text-slate-500 dark:text-slate-400">ккал</span>
                       </span>
                     </div>
-                    <div className="grid grid-cols-3 gap-2 pt-1 border-t border-slate-800/80 text-center text-xs font-mono">
-                      <div className="bg-slate-950/60 p-1.5 rounded-lg border border-slate-800/60">
-                        <span className="text-[10px] text-slate-400 block">Белки</span>
-                        <span className="text-indigo-400 font-bold">{calculatedPortionP} г</span>
+                    <div className="grid grid-cols-3 gap-2 pt-1 border-t border-slate-200/80 dark:border-slate-800/80 text-center text-xs font-mono">
+                      <div className="bg-white dark:bg-slate-950/60 p-2 rounded-lg border border-slate-200 dark:border-slate-800/60 shadow-xs dark:shadow-none">
+                        <span className="text-[10px] text-slate-500 dark:text-slate-400 block font-medium">Белки</span>
+                        <span className="text-indigo-600 dark:text-indigo-400 font-bold">{calculatedPortionP} г</span>
                       </div>
-                      <div className="bg-slate-950/60 p-1.5 rounded-lg border border-slate-800/60">
-                        <span className="text-[10px] text-slate-400 block">Жиры</span>
-                        <span className="text-amber-400 font-bold">{calculatedPortionF} г</span>
+                      <div className="bg-white dark:bg-slate-950/60 p-2 rounded-lg border border-slate-200 dark:border-slate-800/60 shadow-xs dark:shadow-none">
+                        <span className="text-[10px] text-slate-500 dark:text-slate-400 block font-medium">Жиры</span>
+                        <span className="text-amber-600 dark:text-amber-400 font-bold">{calculatedPortionF} г</span>
                       </div>
-                      <div className="bg-slate-950/60 p-1.5 rounded-lg border border-slate-800/60">
-                        <span className="text-[10px] text-slate-400 block">Углеводы</span>
-                        <span className="text-cyan-400 font-bold">{calculatedPortionC} г</span>
+                      <div className="bg-white dark:bg-slate-950/60 p-2 rounded-lg border border-slate-200 dark:border-slate-800/60 shadow-xs dark:shadow-none">
+                        <span className="text-[10px] text-slate-500 dark:text-slate-400 block font-medium">Углеводы</span>
+                        <span className="text-cyan-600 dark:text-cyan-400 font-bold">{calculatedPortionC} г</span>
                       </div>
                     </div>
                   </div>

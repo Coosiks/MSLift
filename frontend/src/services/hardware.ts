@@ -117,13 +117,14 @@ export const hardware = {
   },
 
   /**
-   * Запуск таймера отдыха между подходами (фоновый пуш + вибрация + глобальное событие)
+   * Запуск таймера отдыха между подходами (фоновый пуш + вибрация)
+   * @param fromRestBar - флаг, предотвращающий зацикливание при вызове из RestTimerBar
    */
-  scheduleRestTimer: async (seconds: number, exerciseName?: string): Promise<number> => {
+  scheduleRestTimer: (seconds: number, exerciseName?: string, fromRestBar = false): number => {
     const notificationId = 1001;
 
-    // Глобальное событие для синхронизации плавающей панели RestTimerBar
-    if (typeof window !== 'undefined') {
+    // Глобальное событие для синхронизации плавающей панели RestTimerBar (только если вызов снаружи, например из дневника)
+    if (!fromRestBar && typeof window !== 'undefined') {
       window.dispatchEvent(
         new CustomEvent('mslift:start-rest-timer', {
           detail: { seconds, exerciseName }
@@ -131,64 +132,68 @@ export const hardware = {
       );
     }
 
-    try {
-      await hardware.requestNotificationPermission();
+    // Фоновое асинхронное планирование системных пушей (не блокирует таймер в UI)
+    (async () => {
+      try {
+        if (Capacitor.isPluginAvailable('LocalNotifications')) {
+          await hardware.requestNotificationPermission();
 
-      if (Capacitor.isPluginAvailable('LocalNotifications')) {
-        // Configure Android notification channel with high priority vibration
-        try {
-          await LocalNotifications.createChannel({
-            id: 'rest-timer-channel',
-            name: 'Таймер отдыха MSLift',
-            description: 'Оповещения об окончании времени отдыха между подходами',
-            importance: 5,
-            visibility: 1,
-            vibration: true,
-            lights: true
-          });
-        } catch {
-          // Channel already exists or not supported
-        }
-
-        // Отменяем предыдущие таймеры
-        await LocalNotifications.cancel({ notifications: [{ id: notificationId }] });
-
-        const scheduleDate = new Date(Date.now() + seconds * 1000);
-
-        await LocalNotifications.schedule({
-          notifications: [
-            {
-              id: notificationId,
-              title: '⏰ MSLift: Время отдыха истекло!',
-              body: exerciseName ? `${exerciseName}: пора на следующий подход!` : 'Пора на помост! Удачного подхода!',
-              channelId: 'rest-timer-channel',
-              schedule: { at: scheduleDate, allowWhileIdle: true },
-              sound: undefined,
-              actionTypeId: '',
-              extra: null
-            }
-          ]
-        });
-      } else if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
-        // Fallback для веб-браузеров / мобильного Chrome
-        if (webTimerTimeout) clearTimeout(webTimerTimeout);
-        webTimerTimeout = setTimeout(() => {
+          // Configure Android notification channel with high priority vibration
           try {
-            new Notification('⏰ MSLift: Время отдыха истекло!', {
-              body: exerciseName ? `${exerciseName}: пора на следующий подход!` : 'Пора на помост! Удачного подхода!',
-              icon: '/favicon.ico',
-              tag: 'mslift-rest-timer'
+            await LocalNotifications.createChannel({
+              id: 'rest-timer-channel',
+              name: 'Таймер отдыха MSLift',
+              description: 'Оповещения об окончании времени отдыха между подходами',
+              importance: 5,
+              visibility: 1,
+              vibration: true,
+              lights: true
             });
-            hardware.strongTimerVibrate();
-          } catch {}
-        }, seconds * 1000);
-      }
+          } catch {
+            // Channel already exists or not supported
+          }
 
-      return notificationId;
-    } catch (e) {
-      console.warn('Не удалось запланировать уведомление таймера:', e);
-      return notificationId;
-    }
+          // Отменяем предыдущие таймеры
+          await LocalNotifications.cancel({ notifications: [{ id: notificationId }] });
+
+          const scheduleDate = new Date(Date.now() + seconds * 1000);
+
+          await LocalNotifications.schedule({
+            notifications: [
+              {
+                id: notificationId,
+                title: '⏰ MSLift: Время отдыха истекло!',
+                body: exerciseName ? `${exerciseName}: пора на следующий подход!` : 'Пора на помост! Удачного подхода!',
+                channelId: 'rest-timer-channel',
+                schedule: { at: scheduleDate, allowWhileIdle: true },
+                sound: undefined,
+                actionTypeId: '',
+                extra: null
+              }
+            ]
+          });
+        } else if (typeof window !== 'undefined' && 'Notification' in window) {
+          // Fallback для веб-браузеров / мобильного Chrome
+          if (webTimerTimeout) clearTimeout(webTimerTimeout);
+          webTimerTimeout = setTimeout(() => {
+            try {
+              if (Notification.permission === 'granted') {
+                new Notification('⏰ MSLift: Время отдыха истекло!', {
+                  body: exerciseName ? `${exerciseName}: пора на следующий подход!` : 'Пора на помост! Удачного подхода!',
+                  icon: '/favicon.ico',
+                  tag: 'mslift-rest-timer'
+                });
+              }
+              hardware.strongTimerVibrate();
+            } catch {}
+          }, seconds * 1000);
+        }
+      } catch (e) {
+        console.warn('Не удалось запланировать уведомление таймера:', e);
+      }
+    })();
+
+    return notificationId;
   },
 
   /**

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Timer, RotateCcw, Plus, X, Bell } from 'lucide-react';
 import { hardware } from '../services/hardware';
 
@@ -14,36 +14,6 @@ export const RestTimerBar: React.FC = () => {
   const [exerciseLabel, setExerciseLabel] = useState<string>('');
 
   const targetEndTimeRef = useRef<number | null>(null);
-
-  // Synchronize / calculate exact remaining seconds from target timestamp
-  const syncTimer = useCallback(() => {
-    const savedEndStr = localStorage.getItem(TIMER_STORAGE_END);
-    if (!savedEndStr) {
-      if (isRunning) {
-        setIsRunning(false);
-        setSecondsLeft(0);
-      }
-      return;
-    }
-
-    const targetEnd = Number(savedEndStr);
-    targetEndTimeRef.current = targetEnd;
-    const now = Date.now();
-    const remaining = Math.max(0, Math.ceil((targetEnd - now) / 1000));
-
-    setSecondsLeft(remaining);
-
-    if (remaining <= 0) {
-      // Timer finished!
-      setIsRunning(false);
-      localStorage.removeItem(TIMER_STORAGE_END);
-      targetEndTimeRef.current = null;
-      hardware.setKeepAwake(false);
-      hardware.strongTimerVibrate();
-    } else {
-      setIsRunning(true);
-    }
-  }, [isRunning]);
 
   // Check saved timer on initial mount
   useEffect(() => {
@@ -75,28 +45,51 @@ export const RestTimerBar: React.FC = () => {
   useEffect(() => {
     if (!isRunning) return;
 
-    // Fast ticker (250ms) for smooth and responsive UI updates
-    const interval = setInterval(() => {
-      syncTimer();
-    }, 250);
+    const tick = () => {
+      const savedEndStr = localStorage.getItem(TIMER_STORAGE_END);
+      if (!savedEndStr) {
+        setIsRunning(false);
+        setSecondsLeft(0);
+        return;
+      }
 
-    // CRITICAL: When the screen turns back on or the user returns from another app,
-    // immediately recalculate remaining time based on current Date.now()
-    const handleVisibility = () => {
-      syncTimer();
+      const targetEnd = Number(savedEndStr);
+      targetEndTimeRef.current = targetEnd;
+      const now = Date.now();
+      const remaining = Math.max(0, Math.ceil((targetEnd - now) / 1000));
+
+      setSecondsLeft(remaining);
+
+      if (remaining <= 0) {
+        setIsRunning(false);
+        setSecondsLeft(0);
+        targetEndTimeRef.current = null;
+        localStorage.removeItem(TIMER_STORAGE_END);
+        hardware.setKeepAwake(false);
+        hardware.strongTimerVibrate();
+      }
     };
 
-    document.addEventListener('visibilitychange', handleVisibility);
-    window.addEventListener('focus', handleVisibility);
-    window.addEventListener('pageshow', handleVisibility);
+    // run immediately
+    tick();
+
+    const interval = setInterval(tick, 250);
+
+    const handleResume = () => {
+      tick();
+    };
+
+    document.addEventListener('visibilitychange', handleResume);
+    window.addEventListener('focus', handleResume);
+    window.addEventListener('pageshow', handleResume);
 
     return () => {
       clearInterval(interval);
-      document.removeEventListener('visibilitychange', handleVisibility);
-      window.removeEventListener('focus', handleVisibility);
-      window.removeEventListener('pageshow', handleVisibility);
+      document.removeEventListener('visibilitychange', handleResume);
+      window.removeEventListener('focus', handleResume);
+      window.removeEventListener('pageshow', handleResume);
     };
-  }, [isRunning, syncTimer]);
+  }, [isRunning]);
 
   // Listen to global timer trigger (e.g. from Workout Diary when a set is checked)
   useEffect(() => {
@@ -113,7 +106,7 @@ export const RestTimerBar: React.FC = () => {
     };
   }, []);
 
-  const startTimer = async (sec: number, label?: string) => {
+  const startTimer = (sec: number, label?: string) => {
     hardware.haptic('medium');
     const targetEnd = Date.now() + sec * 1000;
     targetEndTimeRef.current = targetEnd;
@@ -129,11 +122,12 @@ export const RestTimerBar: React.FC = () => {
     localStorage.setItem(TIMER_STORAGE_INIT, String(sec));
     localStorage.setItem(TIMER_STORAGE_LABEL, resolvedLabel);
 
-    await hardware.setKeepAwake(true);
-    await hardware.scheduleRestTimer(sec, resolvedLabel);
+    hardware.setKeepAwake(true);
+    // Crucial: fromRestBar = true prevents hardware from re-dispatching mslift:start-rest-timer back to this component!
+    hardware.scheduleRestTimer(sec, resolvedLabel, true);
   };
 
-  const addTime = async (extraSeconds: number) => {
+  const addTime = (extraSeconds: number) => {
     hardware.haptic('light');
     const now = Date.now();
     const currentRemaining = targetEndTimeRef.current
@@ -151,11 +145,11 @@ export const RestTimerBar: React.FC = () => {
     localStorage.setItem(TIMER_STORAGE_END, String(newTarget));
     localStorage.setItem(TIMER_STORAGE_INIT, String(Math.max(initialSeconds, newSeconds)));
 
-    await hardware.setKeepAwake(true);
-    await hardware.scheduleRestTimer(newSeconds, exerciseLabel || 'MSLift');
+    hardware.setKeepAwake(true);
+    hardware.scheduleRestTimer(newSeconds, exerciseLabel || 'MSLift', true);
   };
 
-  const stopTimer = async () => {
+  const stopTimer = () => {
     hardware.haptic('light');
     setIsRunning(false);
     setSecondsLeft(0);
@@ -165,8 +159,8 @@ export const RestTimerBar: React.FC = () => {
     localStorage.removeItem(TIMER_STORAGE_INIT);
     localStorage.removeItem(TIMER_STORAGE_LABEL);
 
-    await hardware.setKeepAwake(false);
-    await hardware.cancelRestTimer();
+    hardware.setKeepAwake(false);
+    hardware.cancelRestTimer();
   };
 
   const formatTime = (totalSeconds: number) => {
@@ -215,15 +209,8 @@ export const RestTimerBar: React.FC = () => {
             <span className="relative z-10 text-3xl font-black font-mono tracking-wider text-white">
               {formatTime(secondsLeft)}
             </span>
-            <span className="block text-[10px] text-slate-400 relative z-10 mt-0.5 flex items-center justify-center gap-1">
-              {isRunning ? (
-                <>
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping inline-block" />
-                  <span>Отсчёт отдыха (активен в фоне)</span>
-                </>
-              ) : (
-                'Таймер на паузе / завершен'
-              )}
+            <span className="block text-[10px] text-slate-400 relative z-10 mt-0.5">
+              {isRunning ? 'Идёт отдых' : 'Таймер не активен'}
             </span>
           </div>
 
