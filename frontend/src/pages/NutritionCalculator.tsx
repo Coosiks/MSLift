@@ -359,16 +359,17 @@ export const NutritionCalculator: React.FC = () => {
                   type="range"
                   min="40"
                   max="180"
-                  step="0.5"
+                  step="0.1"
                   value={weight}
-                  onChange={(e) => setWeight(Number(e.target.value))}
+                  onChange={(e) => setWeight(Number(e.target.value.replace(',', '.')))}
                   className="flex-1 accent-indigo-500 cursor-pointer"
                 />
                 <input
                   type="number"
-                  step="0.5"
+                  step="any"
+                  inputMode="decimal"
                   value={weight}
-                  onChange={(e) => setWeight(Number(e.target.value))}
+                  onChange={(e) => setWeight(Number(e.target.value.replace(',', '.')))}
                   className="w-20 px-2 py-1 bg-slate-900 border border-slate-800 rounded-lg text-white font-mono text-center text-xs focus:outline-none focus:border-indigo-500"
                 />
               </div>
@@ -394,12 +395,13 @@ export const NutritionCalculator: React.FC = () => {
               <div className="relative">
                 <input
                   type="number"
-                  step="0.5"
+                  step="any"
+                  inputMode="decimal"
                   min="4"
                   max="55"
                   placeholder="Например, 15"
                   value={bodyFat}
-                  onChange={(e) => setBodyFat(e.target.value)}
+                  onChange={(e) => setBodyFat(e.target.value.replace(',', '.'))}
                   className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white font-mono text-sm focus:outline-none focus:border-indigo-500"
                 />
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-500">

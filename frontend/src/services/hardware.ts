@@ -3,6 +3,9 @@ import { LocalNotifications } from '@capacitor/local-notifications';
 import { KeepAwake } from '@capacitor-community/keep-awake';
 import { Capacitor } from '@capacitor/core';
 
+let webWakeLock: any = null;
+let webTimerTimeout: any = null;
+
 export const hardware = {
   /**
    * Тактильная отдача (виброотклик) при нажатиях, переключении подходов и завершении
@@ -27,17 +30,55 @@ export const hardware = {
   },
 
   /**
-   * Запрос разрешений на отправку локальных пуш-уведомлений
+   * Звуковой сигнал завершения таймера отдыха (Web Audio API)
+   */
+  playTimerBeep: () => {
+    try {
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const playTone = (freq: number, start: number, duration: number) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, ctx.currentTime + start);
+        gain.gain.setValueAtTime(0.35, ctx.currentTime + start);
+        gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + start + duration);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(ctx.currentTime + start);
+        osc.stop(ctx.currentTime + start + duration);
+      };
+      // 3 коротких сигнала + 1 финальный длинный
+      playTone(880, 0, 0.12);
+      playTone(880, 0.22, 0.12);
+      playTone(880, 0.44, 0.12);
+      playTone(1320, 0.66, 0.45);
+    } catch (e) {
+      console.warn('Audio beep error:', e);
+    }
+  },
+
+  /**
+   * Запрос разрешений на отправку локальных пуш-уведомлений (Capacitor & Web)
    */
   requestNotificationPermission: async (): Promise<boolean> => {
     try {
-      if (!Capacitor.isPluginAvailable('LocalNotifications')) return false;
-      const status = await LocalNotifications.checkPermissions();
-      if (status.display !== 'granted') {
-        const req = await LocalNotifications.requestPermissions();
-        return req.display === 'granted';
+      if (Capacitor.isPluginAvailable('LocalNotifications')) {
+        const status = await LocalNotifications.checkPermissions();
+        if (status.display !== 'granted') {
+          const req = await LocalNotifications.requestPermissions();
+          return req.display === 'granted';
+        }
+        return true;
+      } else if (typeof window !== 'undefined' && 'Notification' in window) {
+        if (Notification.permission === 'granted') return true;
+        if (Notification.permission !== 'denied') {
+          const res = await Notification.requestPermission();
+          return res === 'granted';
+        }
       }
-      return true;
+      return false;
     } catch {
       return false;
     }
@@ -48,6 +89,9 @@ export const hardware = {
    */
   strongTimerVibrate: async () => {
     try {
+      // Воспроизводим звуковой зуммер
+      hardware.playTimerBeep();
+
       // 1. Web Vibration API pattern if supported
       if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
         navigator.vibrate([800, 200, 800, 200, 1000]);
@@ -73,53 +117,76 @@ export const hardware = {
   },
 
   /**
-   * Запуск таймера отдыха между подходами (фоновый пуш + вибрация)
+   * Запуск таймера отдыха между подходами (фоновый пуш + вибрация + глобальное событие)
    */
   scheduleRestTimer: async (seconds: number, exerciseName?: string): Promise<number> => {
-    const notificationId = Math.floor(Math.random() * 100000);
-    try {
-      if (!Capacitor.isPluginAvailable('LocalNotifications')) return notificationId;
+    const notificationId = 1001;
 
+    // Глобальное событие для синхронизации плавающей панели RestTimerBar
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(
+        new CustomEvent('mslift:start-rest-timer', {
+          detail: { seconds, exerciseName }
+        })
+      );
+    }
+
+    try {
       await hardware.requestNotificationPermission();
 
-      // Configure Android notification channel with high priority vibration
-      try {
-        await LocalNotifications.createChannel({
-          id: 'rest-timer-channel',
-          name: 'Таймер отдыха MSLift',
-          description: 'Оповещения об окончании времени отдыха между подходами',
-          importance: 5,
-          visibility: 1,
-          vibration: true,
-          lights: true
+      if (Capacitor.isPluginAvailable('LocalNotifications')) {
+        // Configure Android notification channel with high priority vibration
+        try {
+          await LocalNotifications.createChannel({
+            id: 'rest-timer-channel',
+            name: 'Таймер отдыха MSLift',
+            description: 'Оповещения об окончании времени отдыха между подходами',
+            importance: 5,
+            visibility: 1,
+            vibration: true,
+            lights: true
+          });
+        } catch {
+          // Channel already exists or not supported
+        }
+
+        // Отменяем предыдущие таймеры
+        await LocalNotifications.cancel({ notifications: [{ id: notificationId }] });
+
+        const scheduleDate = new Date(Date.now() + seconds * 1000);
+
+        await LocalNotifications.schedule({
+          notifications: [
+            {
+              id: notificationId,
+              title: '⏰ MSLift: Время отдыха истекло!',
+              body: exerciseName ? `${exerciseName}: пора на следующий подход!` : 'Пора на помост! Удачного подхода!',
+              channelId: 'rest-timer-channel',
+              schedule: { at: scheduleDate, allowWhileIdle: true },
+              sound: undefined,
+              actionTypeId: '',
+              extra: null
+            }
+          ]
         });
-      } catch {
-        // Channel already exists or not supported
+      } else if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+        // Fallback для веб-браузеров / мобильного Chrome
+        if (webTimerTimeout) clearTimeout(webTimerTimeout);
+        webTimerTimeout = setTimeout(() => {
+          try {
+            new Notification('⏰ MSLift: Время отдыха истекло!', {
+              body: exerciseName ? `${exerciseName}: пора на следующий подход!` : 'Пора на помост! Удачного подхода!',
+              icon: '/favicon.ico',
+              tag: 'mslift-rest-timer'
+            });
+            hardware.strongTimerVibrate();
+          } catch {}
+        }, seconds * 1000);
       }
 
-      // Отменяем предыдущие таймеры
-      await LocalNotifications.cancel({ notifications: [{ id: 1001 }] });
-
-      const scheduleDate = new Date(Date.now() + seconds * 1000);
-
-      await LocalNotifications.schedule({
-        notifications: [
-          {
-            id: 1001,
-            title: '⏰ MSLift: Время отдыха истекло!',
-            body: exerciseName ? `${exerciseName}: пора на следующий подход!` : 'Пора на помост! Удачного подхода!',
-            channelId: 'rest-timer-channel',
-            schedule: { at: scheduleDate },
-            sound: undefined,
-            actionTypeId: '',
-            extra: null
-          }
-        ]
-      });
-
-      return 1001;
+      return notificationId;
     } catch (e) {
-      console.warn('Не удалось запланировать LocalNotification:', e);
+      console.warn('Не удалось запланировать уведомление таймера:', e);
       return notificationId;
     }
   },
@@ -129,8 +196,13 @@ export const hardware = {
    */
   cancelRestTimer: async () => {
     try {
-      if (!Capacitor.isPluginAvailable('LocalNotifications')) return;
-      await LocalNotifications.cancel({ notifications: [{ id: 1001 }] });
+      if (webTimerTimeout) {
+        clearTimeout(webTimerTimeout);
+        webTimerTimeout = null;
+      }
+      if (Capacitor.isPluginAvailable('LocalNotifications')) {
+        await LocalNotifications.cancel({ notifications: [{ id: 1001 }] });
+      }
     } catch (e) {
       console.warn('Ошибка отмены таймера:', e);
     }
@@ -144,14 +216,20 @@ export const hardware = {
       if (enable) {
         if (Capacitor.isPluginAvailable('KeepAwake')) {
           await KeepAwake.keepAwake();
-        } else if ('wakeLock' in navigator) {
-          // Native Web Wake Lock API
-          // @ts-ignore
-          await navigator.wakeLock.request('screen');
+        } else if (typeof navigator !== 'undefined' && 'wakeLock' in navigator) {
+          try {
+            webWakeLock = await (navigator as any).wakeLock.request('screen');
+          } catch {}
         }
       } else {
         if (Capacitor.isPluginAvailable('KeepAwake')) {
           await KeepAwake.allowSleep();
+        }
+        if (webWakeLock) {
+          try {
+            await webWakeLock.release();
+          } catch {}
+          webWakeLock = null;
         }
       }
     } catch (e) {

@@ -14,7 +14,8 @@ import {
   Sun,
   Moon,
   Cookie,
-  Target
+  Target,
+  Scale
 } from 'lucide-react';
 import { api } from '../services/api';
 import type {
@@ -135,6 +136,38 @@ export const Nutrition: React.FC = () => {
   const [carbs, setCarbs] = useState<string>('');
   const [weightGrams, setWeightGrams] = useState<string>('');
 
+  // Mode: 'portion' (direct input) or 'per100g' (values on 100g + portion weight)
+  const [calcMode, setCalcMode] = useState<'portion' | 'per100g'>('portion');
+
+  // Input fields for 100g mode
+  const [p100, setP100] = useState<string>('');
+  const [f100, setF100] = useState<string>('');
+  const [c100, setC100] = useState<string>('');
+  const [cal100, setCal100] = useState<string>('');
+
+  // Helper for parsing any decimal number with comma or dot (e.g. 6.3 or 5,2)
+  const parseNum = (val: string): number => {
+    if (!val) return 0;
+    const clean = val.replace(',', '.').trim();
+    const num = parseFloat(clean);
+    return isNaN(num) ? 0 : num;
+  };
+
+  // Live calculated values on specified portion weight when in per100g mode
+  const p100Num = parseNum(p100);
+  const f100Num = parseNum(f100);
+  const c100Num = parseNum(c100);
+  let cal100Num = parseNum(cal100);
+  if (!cal100Num && (p100Num > 0 || f100Num > 0 || c100Num > 0)) {
+    cal100Num = Math.round(p100Num * 4 + f100Num * 9 + c100Num * 4);
+  }
+  const weightNum = parseNum(weightGrams);
+  const ratio = weightNum > 0 ? weightNum / 100 : 1;
+  const calculatedPortionP = Math.round(p100Num * ratio * 10) / 10;
+  const calculatedPortionF = Math.round(f100Num * ratio * 10) / 10;
+  const calculatedPortionC = Math.round(c100Num * ratio * 10) / 10;
+  const calculatedPortionCal = Math.round(cal100Num * ratio);
+
   // Filter category in list
   const [activeFilter, setActiveFilter] = useState<string>('ALL');
 
@@ -217,17 +250,28 @@ export const Nutrition: React.FC = () => {
 
   // Auto-calculate calories from protein, fat, carbs
   const handleAutoCalcCalories = () => {
-    const p = Number(protein) || 0;
-    const f = Number(fat) || 0;
-    const c = Number(carbs) || 0;
-    const calculated = Math.round(p * 4 + f * 9 + c * 4);
-    if (calculated > 0) {
-      setCalories(String(calculated));
+    if (calcMode === 'per100g') {
+      const p = parseNum(p100);
+      const f = parseNum(f100);
+      const c = parseNum(c100);
+      const calculated = Math.round(p * 4 + f * 9 + c * 4);
+      if (calculated > 0) {
+        setCal100(String(calculated));
+      }
+    } else {
+      const p = parseNum(protein);
+      const f = parseNum(fat);
+      const c = parseNum(carbs);
+      const calculated = Math.round(p * 4 + f * 9 + c * 4);
+      if (calculated > 0) {
+        setCalories(String(calculated));
+      }
     }
   };
 
   // Fill form from quick meal chip
   const handleSelectPreset = (preset: typeof POPULAR_MEALS[0]) => {
+    setCalcMode('portion');
     setFoodName(preset.name);
     setMealType(preset.mealType);
     setCalories(String(preset.calories));
@@ -245,13 +289,37 @@ export const Nutrition: React.FC = () => {
       return;
     }
 
-    const p = Number(protein) || 0;
-    const f = Number(fat) || 0;
-    const c = Number(carbs) || 0;
-    let cal = Number(calories);
+    let p: number;
+    let f: number;
+    let c: number;
+    let cal: number;
+    let w: number | undefined;
 
-    if (!cal || cal <= 0) {
-      cal = Math.round(p * 4 + f * 9 + c * 4);
+    if (calcMode === 'per100g') {
+      const weightVal = parseNum(weightGrams);
+      if (!weightVal || weightVal <= 0) {
+        setErrorMessage('Укажите вес порции в граммах для расчёта БЖУ на 100 г');
+        return;
+      }
+      w = weightVal;
+      p = calculatedPortionP;
+      f = calculatedPortionF;
+      c = calculatedPortionC;
+      cal = calculatedPortionCal;
+
+      if (!cal || cal <= 0) {
+        cal = Math.round(p * 4 + f * 9 + c * 4);
+      }
+    } else {
+      p = parseNum(protein);
+      f = parseNum(fat);
+      c = parseNum(carbs);
+      cal = parseNum(calories);
+      w = weightGrams ? parseNum(weightGrams) : undefined;
+
+      if (!cal || cal <= 0) {
+        cal = Math.round(p * 4 + f * 9 + c * 4);
+      }
     }
 
     if (cal <= 0) {
@@ -264,12 +332,12 @@ export const Nutrition: React.FC = () => {
 
     const payload: NutritionEntryRequest = {
       foodName: foodName.trim(),
-      calories: cal,
-      protein: p,
-      fat: f,
-      carbs: c,
+      calories: Math.round(cal),
+      protein: Math.round(p * 10) / 10,
+      fat: Math.round(f * 10) / 10,
+      carbs: Math.round(c * 10) / 10,
       mealType: mealType,
-      weightGrams: weightGrams ? Number(weightGrams) : undefined,
+      weightGrams: w,
       entryDate: entryDate
     };
 
@@ -313,7 +381,7 @@ export const Nutrition: React.FC = () => {
         return updated;
       });
 
-      setSuccessMessage(`Блюдо «${payload.foodName}» добавлено в дневник!`);
+      setSuccessMessage(`Блюдо «${payload.foodName}» (${payload.calories} ккал) добавлено в дневник!`);
       setTimeout(() => setSuccessMessage(''), 4000);
 
       // Reset form
@@ -323,6 +391,10 @@ export const Nutrition: React.FC = () => {
       setFat('');
       setCarbs('');
       setWeightGrams('');
+      setP100('');
+      setF100('');
+      setC100('');
+      setCal100('');
     } catch (err: any) {
       console.error(err);
       setErrorMessage('Не удалось добавить блюдо. Попробуйте еще раз.');
@@ -348,10 +420,10 @@ export const Nutrition: React.FC = () => {
 
         const updated: DailyNutritionResponse = {
           entries: filtered,
-          totalCalories: Math.max(0, (Number(prev.totalCalories) || 0) - (removed?.calories || 0)),
-          totalProtein: Math.max(0, (Number(prev.totalProtein) || 0) - (removed?.protein || 0)),
-          totalFat: Math.max(0, (Number(prev.totalFat) || 0) - (removed?.fat || 0)),
-          totalCarbs: Math.max(0, (Number(prev.totalCarbs) || 0) - (removed?.carbs || 0))
+          totalCalories: Math.max(0, Math.round((Number(prev.totalCalories) || 0) - (removed?.calories || 0))),
+          totalProtein: Math.max(0, Math.round(((Number(prev.totalProtein) || 0) - (removed?.protein || 0)) * 10) / 10),
+          totalFat: Math.max(0, Math.round(((Number(prev.totalFat) || 0) - (removed?.fat || 0)) * 10) / 10),
+          totalCarbs: Math.max(0, Math.round(((Number(prev.totalCarbs) || 0) - (removed?.carbs || 0)) * 10) / 10)
         };
 
         localStorage.setItem(`mslift_nutrition_${entryDate}`, JSON.stringify(updated));
@@ -371,11 +443,11 @@ export const Nutrition: React.FC = () => {
 
   const isToday = entryDate === new Date().toISOString().split('T')[0];
 
-  // Totals calculations
+  // Totals calculations (preserve 1 decimal place)
   const totalCal = Math.round(Number(dailyData?.totalCalories) || 0);
-  const totalProt = Math.round(Number(dailyData?.totalProtein) || 0);
-  const totalFat = Math.round(Number(dailyData?.totalFat) || 0);
-  const totalCarb = Math.round(Number(dailyData?.totalCarbs) || 0);
+  const totalProt = Math.round((Number(dailyData?.totalProtein) || 0) * 10) / 10;
+  const totalFat = Math.round((Number(dailyData?.totalFat) || 0) * 10) / 10;
+  const totalCarb = Math.round((Number(dailyData?.totalCarbs) || 0) * 10) / 10;
 
   const calProgress = Math.min(100, Math.round((totalCal / (target.calories || 1)) * 100));
   const protProgress = Math.min(100, Math.round((totalProt / (target.protein || 1)) * 100));
@@ -667,6 +739,33 @@ export const Nutrition: React.FC = () => {
               </div>
             </div>
 
+            {/* Mode Switcher: На порцию / На 100 г */}
+            <div className="flex items-center gap-1.5 p-1 bg-slate-900 rounded-xl border border-slate-800">
+              <button
+                type="button"
+                onClick={() => setCalcMode('portion')}
+                className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                  calcMode === 'portion'
+                    ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <span>На порцию</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setCalcMode('per100g')}
+                className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                  calcMode === 'per100g'
+                    ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <Scale className="w-3.5 h-3.5" />
+                <span>На 100 г (пересчёт)</span>
+              </button>
+            </div>
+
             {/* Entry Form */}
             <form onSubmit={handleAddEntry} className="space-y-4 pt-1">
               {/* Meal Type selection */}
@@ -702,109 +801,265 @@ export const Nutrition: React.FC = () => {
                   required
                   value={foodName}
                   onChange={(e) => setFoodName(e.target.value)}
-                  placeholder="Например: Овсяная каша с бананом"
+                  placeholder="Например: Творог с мёдом"
                   className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-white text-sm focus:outline-none focus:border-indigo-500"
                 />
               </div>
 
-              {/* Weight in grams (optional) */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-400 mb-1.5">
-                  Вес порции (г) <span className="text-slate-500 font-normal">(опционально)</span>
-                </label>
-                <div className="relative">
-                  <input
-                    type="number"
-                    min="1"
-                    value={weightGrams}
-                    onChange={(e) => setWeightGrams(e.target.value)}
-                    placeholder="250"
-                    className="w-full px-3.5 py-2 bg-slate-900 border border-slate-800 rounded-xl text-white font-mono text-sm focus:outline-none focus:border-indigo-500"
-                  />
-                  <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-500">
-                    ГР
-                  </span>
-                </div>
-              </div>
+              {calcMode === 'per100g' ? (
+                /* ================= PER 100G MODE ================= */
+                <div className="space-y-3.5 animate-in fade-in duration-200">
+                  {/* Weight of portion (REQUIRED in 100g mode) */}
+                  <div className="p-3 bg-indigo-950/30 border border-indigo-500/30 rounded-xl space-y-1.5">
+                    <label className="block text-xs font-bold text-indigo-300 flex items-center justify-between">
+                      <span className="flex items-center gap-1.5">
+                        <Scale className="w-4 h-4 text-indigo-400" />
+                        Вес вашей порции (г) *
+                      </span>
+                      <span className="text-[10px] text-indigo-400 font-normal">Для точного пересчёта</span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        step="any"
+                        min="1"
+                        inputMode="decimal"
+                        required
+                        value={weightGrams}
+                        onChange={(e) => setWeightGrams(e.target.value.replace(',', '.'))}
+                        placeholder="Например: 180"
+                        className="w-full px-3.5 py-2.5 bg-slate-900 border border-indigo-500/50 rounded-xl text-white font-mono font-bold text-base focus:outline-none focus:border-indigo-400"
+                      />
+                      <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-indigo-300">
+                        ГРАММ
+                      </span>
+                    </div>
+                  </div>
 
-              {/* Macros: Protein, Fat, Carbs */}
-              <div className="grid grid-cols-3 gap-2">
-                <div>
-                  <label className="block text-[11px] font-bold text-indigo-400 mb-1">
-                    Белки (г)
-                  </label>
-                  <input
-                    type="number"
-                    step="0.5"
-                    min="0"
-                    value={protein}
-                    onChange={(e) => setProtein(e.target.value)}
-                    placeholder="25"
-                    className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-white font-mono text-center text-sm focus:outline-none focus:border-indigo-500"
-                  />
-                </div>
+                  {/* 100g Macros */}
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-400 mb-1.5">
+                      Значения на 100 г продукта (с упаковки):
+                    </label>
+                    <div className="grid grid-cols-3 gap-2">
+                      <div>
+                        <label className="block text-[11px] font-bold text-indigo-400 mb-1">
+                          Белки / 100г
+                        </label>
+                        <input
+                          type="number"
+                          step="any"
+                          min="0"
+                          inputMode="decimal"
+                          value={p100}
+                          onChange={(e) => setP100(e.target.value.replace(',', '.'))}
+                          placeholder="16.5"
+                          className="w-full px-2.5 py-2 bg-slate-900 border border-slate-800 rounded-xl text-white font-mono text-center text-sm focus:outline-none focus:border-indigo-500"
+                        />
+                      </div>
 
-                <div>
-                  <label className="block text-[11px] font-bold text-amber-400 mb-1">
-                    Жиры (г)
-                  </label>
-                  <input
-                    type="number"
-                    step="0.5"
-                    min="0"
-                    value={fat}
-                    onChange={(e) => setFat(e.target.value)}
-                    placeholder="10"
-                    className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-white font-mono text-center text-sm focus:outline-none focus:border-amber-500"
-                  />
-                </div>
+                      <div>
+                        <label className="block text-[11px] font-bold text-amber-400 mb-1">
+                          Жиры / 100г
+                        </label>
+                        <input
+                          type="number"
+                          step="any"
+                          min="0"
+                          inputMode="decimal"
+                          value={f100}
+                          onChange={(e) => setF100(e.target.value.replace(',', '.'))}
+                          placeholder="2.2"
+                          className="w-full px-2.5 py-2 bg-slate-900 border border-slate-800 rounded-xl text-white font-mono text-center text-sm focus:outline-none focus:border-amber-500"
+                        />
+                      </div>
 
-                <div>
-                  <label className="block text-[11px] font-bold text-cyan-400 mb-1">
-                    Углеводы (г)
-                  </label>
-                  <input
-                    type="number"
-                    step="0.5"
-                    min="0"
-                    value={carbs}
-                    onChange={(e) => setCarbs(e.target.value)}
-                    placeholder="45"
-                    className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-white font-mono text-center text-sm focus:outline-none focus:border-cyan-500"
-                  />
-                </div>
-              </div>
+                      <div>
+                        <label className="block text-[11px] font-bold text-cyan-400 mb-1">
+                          Углеводы / 100г
+                        </label>
+                        <input
+                          type="number"
+                          step="any"
+                          min="0"
+                          inputMode="decimal"
+                          value={c100}
+                          onChange={(e) => setC100(e.target.value.replace(',', '.'))}
+                          placeholder="3.8"
+                          className="w-full px-2.5 py-2 bg-slate-900 border border-slate-800 rounded-xl text-white font-mono text-center text-sm focus:outline-none focus:border-cyan-500"
+                        />
+                      </div>
+                    </div>
+                  </div>
 
-              {/* Calories & Auto calc button */}
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-xs font-semibold text-slate-400">
-                    Калории (ккал) *
-                  </label>
-                  <button
-                    type="button"
-                    onClick={handleAutoCalcCalories}
-                    className="text-[11px] text-indigo-400 hover:text-indigo-300 font-medium flex items-center gap-1 cursor-pointer"
-                  >
-                    <Calculator className="w-3 h-3" />
-                    <span>Рассчитать из БЖУ</span>
-                  </button>
+                  {/* 100g Calories */}
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="text-xs font-semibold text-slate-400">
+                        Калории на 100 г (ккал)
+                      </label>
+                      <button
+                        type="button"
+                        onClick={handleAutoCalcCalories}
+                        className="text-[11px] text-indigo-400 hover:text-indigo-300 font-medium flex items-center gap-1 cursor-pointer"
+                      >
+                        <Calculator className="w-3 h-3" />
+                        <span>Рассчитать из БЖУ</span>
+                      </button>
+                    </div>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        step="any"
+                        min="0"
+                        inputMode="decimal"
+                        value={cal100}
+                        onChange={(e) => setCal100(e.target.value.replace(',', '.'))}
+                        placeholder="Например: 101"
+                        className="w-full px-3.5 py-2 bg-slate-900 border border-slate-800 rounded-xl text-white font-mono font-bold text-sm focus:outline-none focus:border-indigo-500"
+                      />
+                      <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-500">
+                        ККАЛ/100Г
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Live calculated results preview */}
+                  <div className="p-3 bg-slate-900/90 border border-slate-800 rounded-xl space-y-2">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-slate-300 font-bold flex items-center gap-1.5">
+                        <Scale className="w-3.5 h-3.5 text-indigo-400" />
+                        Итого в дневник {weightNum > 0 ? `на ${weightNum} г` : '(укажите вес)'}:
+                      </span>
+                      <span className="text-sm font-black font-mono text-amber-400">
+                        {calculatedPortionCal} <span className="text-xs font-normal text-slate-400">ккал</span>
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 pt-1 border-t border-slate-800/80 text-center text-xs font-mono">
+                      <div className="bg-slate-950/60 p-1.5 rounded-lg border border-slate-800/60">
+                        <span className="text-[10px] text-slate-400 block">Белки</span>
+                        <span className="text-indigo-400 font-bold">{calculatedPortionP} г</span>
+                      </div>
+                      <div className="bg-slate-950/60 p-1.5 rounded-lg border border-slate-800/60">
+                        <span className="text-[10px] text-slate-400 block">Жиры</span>
+                        <span className="text-amber-400 font-bold">{calculatedPortionF} г</span>
+                      </div>
+                      <div className="bg-slate-950/60 p-1.5 rounded-lg border border-slate-800/60">
+                        <span className="text-[10px] text-slate-400 block">Углеводы</span>
+                        <span className="text-cyan-400 font-bold">{calculatedPortionC} г</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div className="relative">
-                  <input
-                    type="number"
-                    step="1"
-                    min="0"
-                    value={calories}
-                    onChange={(e) => setCalories(e.target.value)}
-                    placeholder="Например: 350"
-                    className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-white font-mono font-bold text-base focus:outline-none focus:border-indigo-500"
-                  />
-                  <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-500">
-                    ККАЛ
-                  </span>
+              ) : (
+                /* ================= DIRECT PORTION MODE ================= */
+                <div className="space-y-4 animate-in fade-in duration-200">
+                  {/* Weight in grams (optional) */}
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-400 mb-1.5">
+                      Вес порции (г) <span className="text-slate-500 font-normal">(опционально)</span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        step="any"
+                        min="1"
+                        inputMode="decimal"
+                        value={weightGrams}
+                        onChange={(e) => setWeightGrams(e.target.value.replace(',', '.'))}
+                        placeholder="250"
+                        className="w-full px-3.5 py-2 bg-slate-900 border border-slate-800 rounded-xl text-white font-mono text-sm focus:outline-none focus:border-indigo-500"
+                      />
+                      <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-500">
+                        ГР
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Macros: Protein, Fat, Carbs */}
+                  <div className="grid grid-cols-3 gap-2">
+                    <div>
+                      <label className="block text-[11px] font-bold text-indigo-400 mb-1">
+                        Белки (г)
+                      </label>
+                      <input
+                        type="number"
+                        step="any"
+                        min="0"
+                        inputMode="decimal"
+                        value={protein}
+                        onChange={(e) => setProtein(e.target.value.replace(',', '.'))}
+                        placeholder="25"
+                        className="w-full px-2.5 py-2 bg-slate-900 border border-slate-800 rounded-xl text-white font-mono text-center text-sm focus:outline-none focus:border-indigo-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold text-amber-400 mb-1">
+                        Жиры (г)
+                      </label>
+                      <input
+                        type="number"
+                        step="any"
+                        min="0"
+                        inputMode="decimal"
+                        value={fat}
+                        onChange={(e) => setFat(e.target.value.replace(',', '.'))}
+                        placeholder="10"
+                        className="w-full px-2.5 py-2 bg-slate-900 border border-slate-800 rounded-xl text-white font-mono text-center text-sm focus:outline-none focus:border-amber-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold text-cyan-400 mb-1">
+                        Углеводы (г)
+                      </label>
+                      <input
+                        type="number"
+                        step="any"
+                        min="0"
+                        inputMode="decimal"
+                        value={carbs}
+                        onChange={(e) => setCarbs(e.target.value.replace(',', '.'))}
+                        placeholder="45"
+                        className="w-full px-2.5 py-2 bg-slate-900 border border-slate-800 rounded-xl text-white font-mono text-center text-sm focus:outline-none focus:border-cyan-500"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Calories & Auto calc button */}
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="text-xs font-semibold text-slate-400">
+                        Калории (ккал) *
+                      </label>
+                      <button
+                        type="button"
+                        onClick={handleAutoCalcCalories}
+                        className="text-[11px] text-indigo-400 hover:text-indigo-300 font-medium flex items-center gap-1 cursor-pointer"
+                      >
+                        <Calculator className="w-3 h-3" />
+                        <span>Рассчитать из БЖУ</span>
+                      </button>
+                    </div>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        step="any"
+                        min="0"
+                        inputMode="decimal"
+                        value={calories}
+                        onChange={(e) => setCalories(e.target.value.replace(',', '.'))}
+                        placeholder="Например: 350"
+                        className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-white font-mono font-bold text-base focus:outline-none focus:border-indigo-500"
+                      />
+                      <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-500">
+                        ККАЛ
+                      </span>
+                    </div>
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Submit button */}
               <button
@@ -813,7 +1068,13 @@ export const Nutrition: React.FC = () => {
                 className="w-full py-3 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white rounded-xl font-bold text-sm transition shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
               >
                 <Plus className="w-4 h-4" />
-                <span>{submitting ? 'Запись...' : 'Добавить блюдо в дневник'}</span>
+                <span>
+                  {submitting
+                    ? 'Запись...'
+                    : calcMode === 'per100g'
+                    ? `Добавить порцию (${calculatedPortionCal} ккал)`
+                    : 'Добавить блюдо в дневник'}
+                </span>
               </button>
             </form>
           </div>
