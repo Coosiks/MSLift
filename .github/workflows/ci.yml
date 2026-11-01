@@ -1,0 +1,64 @@
+name: CI — Build & Automated Tests
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
+
+jobs:
+  backend-test:
+    name: Backend — Java 21 & Spring Boot 3 Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: 'gradle'
+
+      - name: Make Gradle wrapper executable
+        run: chmod +x gradlew
+
+      - name: Run Spring Boot Unit & Integration Tests
+        run: ./gradlew test --no-daemon
+
+      - name: Upload Test Report (if failure)
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: gradle-test-reports
+          path: build/reports/tests/test/
+
+  frontend-build:
+    name: Frontend — TypeScript & Vite Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: frontend/package.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm install
+
+      - name: Typecheck & Build production bundle
+        working-directory: frontend
+        run: npm run build
+
+      - name: Run code linter
+        working-directory: frontend
+        run: npm run lint

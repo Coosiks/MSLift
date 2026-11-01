@@ -1,14 +1,15 @@
 #  MSLift — Полнофункциональная экосистема для силовых видов спорта и пауэрлифтинга
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Java-25-orange?style=for-the-badge&logo=openjdk&logoColor=white" alt="Java 25" />
-  <img src="https://img.shields.io/badge/Spring_Boot-4.1.1-6DB33F?style=for-the-badge&logo=springboot&logoColor=white" alt="Spring Boot" />
+  <img src="https://img.shields.io/badge/Java-21_LTS-orange?style=for-the-badge&logo=openjdk&logoColor=white" alt="Java 21" />
+  <img src="https://img.shields.io/badge/Spring_Boot-3.3.5-6DB33F?style=for-the-badge&logo=springboot&logoColor=white" alt="Spring Boot" />
   <img src="https://img.shields.io/badge/React-19.0-61DAFB?style=for-the-badge&logo=react&logoColor=black" alt="React 19" />
   <img src="https://img.shields.io/badge/TypeScript-5.7-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript" />
   <img src="https://img.shields.io/badge/Vite-6.0-646CFF?style=for-the-badge&logo=vite&logoColor=white" alt="Vite" />
   <img src="https://img.shields.io/badge/PostgreSQL-16-4169E1?style=for-the-badge&logo=postgresql&logoColor=white" alt="PostgreSQL" />
   <img src="https://img.shields.io/badge/Docker-Compose-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker" />
-  <img src="https://img.shields.io/badge/License-All_Rights_Reserved-red?style=for-the-badge" alt="All Rights Reserved" />
+  <img src="https://img.shields.io/badge/Tests-JUnit_5-25A162?style=for-the-badge&logo=junit5&logoColor=white" alt="JUnit 5" />
+  <img src="https://img.shields.io/badge/License-MIT-blue?style=for-the-badge" alt="MIT License" />
 </p>
 
 <p align="center">
@@ -43,7 +44,11 @@
 - Расчет суточных энергозатрат (**TDEE**) с учетом коэффициента силовой активности (PAL).
 - Персонализированное распределение макронутриентов под 4 цели: *Сброс веса (дефицит 15%)*, *Поддержание*, *Набор массы (профицит 10%)*, *Сушка к соревнованиям*.
 
-### 6. Темы оформления (Dark & Light Mode)
+### 6. Мобильный опыт (Capacitor & UX)
+- Поддержка нативного режима через **Capacitor** (сборка в Android APK).
+- Интеграция с **Keep-Awake** (экран не гаснет во время выполнения подходов) и **Local Notifications** (таймер отдыха между подходами).
+
+### 7. Темы оформления (Dark & Light Mode)
 - Полноценная светлая и тёмная тема с сохранением предпочтения в `localStorage`.
 - Плавные микроанимации, адаптивный дизайн для мобильных устройств, планшетов и десктопов.
 
@@ -52,17 +57,19 @@
 ## 🛠 Технологический стек
 
 ### Бэкенд
-- **Язык**: Java 25
-- **Фреймворк**: Spring Boot 4.1.1 (Spring Web, Spring Data JPA, Jakarta Validation)
-- **База данных**: PostgreSQL 16
+- **Язык**: Java 21 (LTS)
+- **Фреймворк**: Spring Boot 3.3.5 (Spring Web, Spring Data JPA, Spring Security, Jakarta Validation)
+- **База данных**: PostgreSQL 16 + H2 (in-memory для изолированных тестов)
 - **Миграции**: Flyway Migration
-- **Сборка**: Gradle 8.x Wrapper
-- **Утилиты**: Lombok, Docker Compose
+- **Тестирование**: JUnit 5, Mockito, AssertJ, Spring Boot Test
+- **Сборка**: Gradle Wrapper
+- **Утилиты**: Lombok, Docker Compose, JJWT (JSON Web Token)
 
 ### Фронтенд
-- **Фреймворк**: React 19 + TypeScript
-- **Сборщик**: Vite 6
-- **Стилизация**: Tailwind CSS v4 + Vanilla CSS стеклянный неоморфизм/glassmorphism
+- **Фреймворк**: React 19 + TypeScript 5.7
+- **Сборщик**: Vite 6.0
+- **Мобильный стек**: Capacitor (@capacitor/core, @capacitor/local-notifications, @capacitor-community/keep-awake)
+- **Стилизация**: Tailwind CSS v4 + Glassmorphism
 - **Иконки**: Lucide React
 - **Маршрутизация**: React Router DOM v7
 
@@ -105,9 +112,9 @@ MSLift/
 ## Быстрый старт
 
 ### Требования
-- **Java**: 21 или новее (рекомендуется Java 25)
+- **Java**: 21 LTS (OpenJDK 21 / Eclipse Temurin)
 - **Node.js**: 18+ и **npm**
-- **Docker** и **Docker Compose**
+- **Docker** и **Docker Compose** (для запуска PostgreSQL)
 
 ### 1. Клонирование репозитория
 ```bash
@@ -130,7 +137,8 @@ docker compose up -d
 # Linux / macOS
 ./gradlew bootRun
 ```
-> REST API будет доступен по адресу: `http://localhost:8080/api`
+> REST API будет доступен по адресу: `http://localhost:8080/api`  
+> Swagger UI интерактивная документация: `http://localhost:8080/swagger-ui.html`
 
 ### 4. Запуск фронтенда (React + Vite)
 В отдельном окне терминала:
@@ -140,6 +148,15 @@ npm install
 npm run dev
 ```
 > Фронтенд запустится на: `http://localhost:5173/`
+
+### 5. Запуск модульных тестов
+```bash
+# Windows
+.\gradlew.bat test
+
+# Linux / macOS
+./gradlew test
+```
 
 ---
 
@@ -167,6 +184,7 @@ npm run dev
 - `feat:` — добавление новой функциональности
 - `fix:` — исправление ошибок
 - `docs:` — обновление документации
+- `test:` — добавление и обновление тестов
 - `refactor:` — рефакторинг кода без изменения логики
 - `style:` — правки форматирования, CSS, отступов
 - `chore:` — обновление зависимостей, сборки, конфигураций
@@ -175,10 +193,10 @@ npm run dev
 
 ## Лицензия и отказ от ответственности
 
-### 1. Авторские права (Proprietary / All Rights Reserved)
-Проект является объектом интеллектуальной собственности и защищён авторским правом.  
-Copyright (c) 2026 [Coosiks](https://github.com/Coosiks). Все права защищены (All Rights Reserved).  
-**Запрещается** любое копирование, модификация, распространение, публикация или коммерческое использование исходного кода, алгоритмов, структуры базы данных и дизайна интерфейса без предварительного письменного разрешения автора. Проект опубликован на GitHub исключительно в целях демонстрации портфолио.
+### 1. Лицензия (MIT License)
+Проект распространяется под открытой лицензией [MIT](LICENSE).  
+Copyright (c) 2026 [Coosiks](https://github.com/Coosiks).  
+Код открыт для изучения, форков и использования в рамках портфолио и некоммерческой разработки.
 
 ### 2. Отказ от медицинской и спортивной ответственности (Health & Fitness Disclaimer)
 Все тренировочные планы, расчёты рабочих весов (1ПМ) и норм КБЖУ носят исключительно рекомендательный и ознакомительный характер. Работа с субмаксимальными и максимальными весами в пауэрлифтинге сопряжена с риском получения спортивных травм. Приложение не заменяет очную консультацию спортивного врача и контроль сертифицированного тренера. Пользователь несёт полную личную ответственность за своё здоровье и технику выполнения упражнений.
