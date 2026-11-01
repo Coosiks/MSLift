@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import {
   BookOpen,
   Dumbbell,
@@ -12,6 +13,7 @@ import {
 } from 'lucide-react';
 import { api } from '../services/api';
 import { hardware } from '../services/hardware';
+import { MOCK_PROGRAMS } from '../services/mockData';
 import type {
   TrainingProgram,
   ProgramWeekResponse,
@@ -19,6 +21,16 @@ import type {
   AccessoryExerciseItem,
   TrainingDiaryResponse
 } from '../types';
+
+interface DiaryNavState {
+  programId?: string;
+  week?: number;
+  day?: number;
+  bench1Rm?: number;
+  squat1Rm?: number;
+  deadlift1Rm?: number;
+  custom1Rm?: number;
+}
 
 // Popular powerlifting accessory exercise recommendations
 const POPULAR_ACCESSORIES = [
@@ -58,21 +70,55 @@ const CUSTOM_FREE_PROGRAM: TrainingProgram = {
 };
 
 export const WorkoutDiary: React.FC = () => {
-  // Programs & Selection
-  const [programs, setPrograms] = useState<TrainingProgram[]>([]);
-  const [selectedProgramId, setSelectedProgramId] = useState<string>('custom-free-workout');
-  const [selectedWeek, setSelectedWeek] = useState<number>(1);
-  const [selectedDay, setSelectedDay] = useState<number>(1);
+  const location = useLocation();
+  const navState = (location.state as DiaryNavState) || null;
+
+  // Programs & Selection - pre-populated with mock programs so options exist immediately
+  const [programs, setPrograms] = useState<TrainingProgram[]>([
+    CUSTOM_FREE_PROGRAM,
+    ...MOCK_PROGRAMS.filter((p) => p.id !== CUSTOM_FREE_PROGRAM.id)
+  ]);
+  const [selectedProgramId, setSelectedProgramId] = useState<string>(() => {
+    if (navState?.programId) return navState.programId;
+    const saved = localStorage.getItem('mslift_diary_prog_id');
+    return saved || 'custom-free-workout';
+  });
+  const [selectedWeek, setSelectedWeek] = useState<number>(() => {
+    if (navState?.week !== undefined) return Number(navState.week);
+    const saved = localStorage.getItem('mslift_diary_week');
+    return saved ? Number(saved) : 1;
+  });
+  const [selectedDay, setSelectedDay] = useState<number>(() => {
+    if (navState?.day !== undefined) return Number(navState.day);
+    const saved = localStorage.getItem('mslift_diary_day');
+    return saved ? Number(saved) : 1;
+  });
   const [workoutDate, setWorkoutDate] = useState<string>(
     new Date().toISOString().split('T')[0]
   );
   const [notes, setNotes] = useState<string>('');
 
   // 1RM weights for base exercise calculations
-  const [bench1Rm, setBench1Rm] = useState<number>(100);
-  const [squat1Rm, setSquat1Rm] = useState<number>(140);
-  const [deadlift1Rm, setDeadlift1Rm] = useState<number>(160);
-  const [custom1Rm, setCustom1Rm] = useState<number>(100);
+  const [bench1Rm, setBench1Rm] = useState<number>(() => {
+    if (navState?.bench1Rm !== undefined) return Number(navState.bench1Rm);
+    const saved = localStorage.getItem('mslift_1rm_bench');
+    return saved ? Number(saved) : 100;
+  });
+  const [squat1Rm, setSquat1Rm] = useState<number>(() => {
+    if (navState?.squat1Rm !== undefined) return Number(navState.squat1Rm);
+    const saved = localStorage.getItem('mslift_1rm_squat');
+    return saved ? Number(saved) : 140;
+  });
+  const [deadlift1Rm, setDeadlift1Rm] = useState<number>(() => {
+    if (navState?.deadlift1Rm !== undefined) return Number(navState.deadlift1Rm);
+    const saved = localStorage.getItem('mslift_1rm_deadlift');
+    return saved ? Number(saved) : 160;
+  });
+  const [custom1Rm, setCustom1Rm] = useState<number>(() => {
+    if (navState?.custom1Rm !== undefined) return Number(navState.custom1Rm);
+    const saved = localStorage.getItem('mslift_1rm_single');
+    return saved ? Number(saved) : 100;
+  });
 
   // Program Base Exercises for selected week & day
   const [baseTemplates, setBaseTemplates] = useState<ProgramWeekResponse[]>([]);
@@ -109,6 +155,29 @@ export const WorkoutDiary: React.FC = () => {
   const [successMessage, setSuccessMessage] = useState<string>('');
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [completedSets, setCompletedSets] = useState<Record<number, boolean>>({});
+
+  // Respond immediately if location.state changes (e.g. user clicked "В дневник" from Programs)
+  useEffect(() => {
+    if (location.state) {
+      const state = location.state as DiaryNavState;
+      if (state.programId) {
+        setSelectedProgramId(state.programId);
+        localStorage.setItem('mslift_diary_prog_id', state.programId);
+      }
+      if (state.week !== undefined) {
+        setSelectedWeek(Number(state.week));
+        localStorage.setItem('mslift_diary_week', String(state.week));
+      }
+      if (state.day !== undefined) {
+        setSelectedDay(Number(state.day));
+        localStorage.setItem('mslift_diary_day', String(state.day));
+      }
+      if (state.bench1Rm !== undefined) setBench1Rm(Number(state.bench1Rm));
+      if (state.squat1Rm !== undefined) setSquat1Rm(Number(state.squat1Rm));
+      if (state.deadlift1Rm !== undefined) setDeadlift1Rm(Number(state.deadlift1Rm));
+      if (state.custom1Rm !== undefined) setCustom1Rm(Number(state.custom1Rm));
+    }
+  }, [location.state]);
 
   // Keep screen awake during workout session
   useEffect(() => {
@@ -174,27 +243,10 @@ export const WorkoutDiary: React.FC = () => {
     localStorage.setItem('mslift_diary_custom_base', JSON.stringify(updated));
   };
 
-  // Load programs, cached state, and diary history on mount
+  // Load programs and diary history on mount
   useEffect(() => {
     loadPrograms();
     loadDiaryHistory();
-
-    // Restore saved active program and 1RMs from localStorage
-    const savedProgId = localStorage.getItem('mslift_diary_prog_id');
-    const savedWeek = localStorage.getItem('mslift_diary_week');
-    const savedDay = localStorage.getItem('mslift_diary_day');
-    const savedBench = localStorage.getItem('mslift_1rm_bench');
-    const savedSquat = localStorage.getItem('mslift_1rm_squat');
-    const savedDeadlift = localStorage.getItem('mslift_1rm_deadlift');
-    const savedSingle = localStorage.getItem('mslift_1rm_single');
-
-    if (savedProgId) setSelectedProgramId(savedProgId);
-    if (savedWeek) setSelectedWeek(Number(savedWeek));
-    if (savedDay) setSelectedDay(Number(savedDay));
-    if (savedBench) setBench1Rm(Number(savedBench));
-    if (savedSquat) setSquat1Rm(Number(savedSquat));
-    if (savedDeadlift) setDeadlift1Rm(Number(savedDeadlift));
-    if (savedSingle) setCustom1Rm(Number(savedSingle));
   }, []);
 
   // When selected program, week, or day changes, fetch base exercises
@@ -212,13 +264,6 @@ export const WorkoutDiary: React.FC = () => {
       const data = await api.getPrograms();
       const combined = [CUSTOM_FREE_PROGRAM, ...data.filter((p) => p.id !== CUSTOM_FREE_PROGRAM.id)];
       setPrograms(combined);
-      if (combined.length > 0) {
-        const savedProgId = localStorage.getItem('mslift_diary_prog_id');
-        const defaultProg = savedProgId
-          ? combined.find((p) => p.id === savedProgId) || combined[0]
-          : combined[0];
-        setSelectedProgramId(defaultProg.id);
-      }
     } catch (err) {
       console.error('Ошибка загрузки программ:', err);
     }
@@ -245,7 +290,10 @@ export const WorkoutDiary: React.FC = () => {
     }
   };
 
-  const selectedProgram = programs.find((p) => p.id === selectedProgramId) || CUSTOM_FREE_PROGRAM;
+  const selectedProgram =
+    programs.find((p) => p.id === selectedProgramId) ||
+    MOCK_PROGRAMS.find((p) => p.id === selectedProgramId) ||
+    CUSTOM_FREE_PROGRAM;
   const isCustomWorkout = selectedProgramId === 'custom-free-workout';
   const isPowerlifting =
     selectedProgram?.movementCategory === 'POWERLIFTING' ||
@@ -267,7 +315,9 @@ export const WorkoutDiary: React.FC = () => {
     }
     try {
       setLoadingBase(true);
-      const prog = programs.find((p) => p.id === progId);
+      const prog =
+        programs.find((p) => p.id === progId) ||
+        MOCK_PROGRAMS.find((p) => p.id === progId);
       const isPl = prog?.movementCategory === 'POWERLIFTING' || prog?.movementCategory === 'UNIVERSAL';
 
       let weekData: ProgramWeekResponse[];

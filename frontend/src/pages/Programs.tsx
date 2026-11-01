@@ -211,15 +211,32 @@ export const Programs: React.FC = () => {
     }
   };
 
-  const handleSelectForDiary = () => {
+  const handleSelectForDiary = (targetDay = 1) => {
     if (!selectedProgram) return;
+
+    const benchVal = selectedProgram.movementCategory === 'BENCH' ? userOneRm : userBenchOneRm;
+    const squatVal = selectedProgram.movementCategory === 'SQUAT' ? userOneRm : userSquatOneRm;
+    const deadliftVal = selectedProgram.movementCategory === 'DEADLIFT' ? userOneRm : userDeadliftOneRm;
+
     localStorage.setItem('mslift_diary_prog_id', selectedProgram.id);
     localStorage.setItem('mslift_diary_week', String(selectedWeek));
-    localStorage.setItem('mslift_1rm_bench', String(userBenchOneRm));
-    localStorage.setItem('mslift_1rm_squat', String(userSquatOneRm));
-    localStorage.setItem('mslift_1rm_deadlift', String(userDeadliftOneRm));
+    localStorage.setItem('mslift_diary_day', String(targetDay));
+    localStorage.setItem('mslift_1rm_bench', String(benchVal));
+    localStorage.setItem('mslift_1rm_squat', String(squatVal));
+    localStorage.setItem('mslift_1rm_deadlift', String(deadliftVal));
     localStorage.setItem('mslift_1rm_single', String(userOneRm));
-    navigate('/workouts');
+
+    navigate('/workouts', {
+      state: {
+        programId: selectedProgram.id,
+        week: selectedWeek,
+        day: targetDay,
+        bench1Rm: benchVal,
+        squat1Rm: squatVal,
+        deadlift1Rm: deadliftVal,
+        custom1Rm: userOneRm,
+      }
+    });
   };
 
   // Helper: round weight to 2.5 kg plates
@@ -658,7 +675,7 @@ export const Programs: React.FC = () => {
 
               <button
                 type="button"
-                onClick={handleSelectForDiary}
+                onClick={() => handleSelectForDiary(1)}
                 className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition shadow-md shadow-emerald-600/25 flex items-center gap-1.5 cursor-pointer"
                 title="Перейти к тренировке по этой программе в Дневник"
               >
@@ -767,9 +784,20 @@ export const Programs: React.FC = () => {
                           </div>
                         </div>
 
-                        <span className="text-xs font-mono text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-md border border-emerald-500/20">
-                          ~{setsList[0]?.restSeconds || 120} сек отдых
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-mono text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded-md border border-emerald-500/20">
+                            ~{setsList[0]?.restSeconds || 120} сек
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleSelectForDiary(Number(dayNum))}
+                            className="px-2.5 py-1 bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white rounded-lg text-xs font-bold transition border border-emerald-500/30 flex items-center gap-1 cursor-pointer"
+                            title={`Начать тренировку Дня ${dayNum} в Дневнике`}
+                          >
+                            <span>В дневник</span>
+                            <ArrowRight className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </div>
 
                       {/* Exercises and Sets in this day */}
