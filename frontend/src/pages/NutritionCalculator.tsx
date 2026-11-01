@@ -376,39 +376,53 @@ export const NutritionCalculator: React.FC = () => {
             </div>
 
             {/* Body Fat (Optional) */}
-            <div className="p-4 bg-slate-900/60 rounded-xl border border-slate-800 space-y-2">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
-                  <span>Процент жира в организме (%)</span>
+            <div>
+              <div className="flex items-center justify-between text-xs mb-1.5">
+                <div className="flex items-center gap-1.5">
+                  <span className="font-semibold text-slate-400">Процент жира в организме (%)</span>
                   <span className="text-[10px] text-slate-500 font-normal">(опционально)</span>
-                </label>
-                {bodyFat !== '' && (
-                  <button
-                    type="button"
-                    onClick={() => setBodyFat('')}
-                    className="text-[11px] text-slate-400 hover:text-rose-400 transition cursor-pointer"
-                  >
-                    Сбросить
-                  </button>
-                )}
+                </div>
+                <div className="flex items-center gap-2">
+                  {bodyFat !== '' ? (
+                    <>
+                      <span className="font-mono font-bold text-indigo-400 text-sm">{bodyFat}%</span>
+                      <button
+                        type="button"
+                        onClick={() => setBodyFat('')}
+                        className="text-[11px] text-slate-400 hover:text-rose-400 transition cursor-pointer"
+                        title="Сбросить процент жира"
+                      >
+                        Сбросить
+                      </button>
+                    </>
+                  ) : (
+                    <span className="text-xs text-slate-500">Не указан</span>
+                  )}
+                </div>
               </div>
-              <div className="relative">
+              <div className="flex items-center gap-3">
+                <input
+                  type="range"
+                  min="4"
+                  max="50"
+                  step="0.5"
+                  value={bodyFat !== '' ? Number(bodyFat) : 15}
+                  onChange={(e) => setBodyFat(e.target.value)}
+                  className="flex-1 accent-indigo-500 cursor-pointer"
+                />
                 <input
                   type="number"
                   step="any"
                   inputMode="decimal"
                   min="4"
                   max="55"
-                  placeholder="Например, 15"
+                  placeholder="%"
                   value={bodyFat}
                   onChange={(e) => setBodyFat(e.target.value.replace(',', '.'))}
-                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white font-mono text-sm focus:outline-none focus:border-indigo-500"
+                  className="w-20 px-2 py-1 bg-slate-900 border border-slate-800 rounded-lg text-white font-mono text-center text-xs focus:outline-none focus:border-indigo-500"
                 />
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-500">
-                  %
-                </span>
               </div>
-              <p className="text-[11px] text-slate-400 leading-snug flex items-center gap-1">
+              <p className="text-[11px] text-slate-400 leading-snug flex items-center gap-1 mt-1.5">
                 <Info className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
                 <span>Заполните для расчёта по спортивной формуле Кэтча-МакАрдла</span>
               </p>
