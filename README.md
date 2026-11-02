@@ -19,6 +19,18 @@
   <strong>MSLift</strong> — современная кроссплатформенная веб- и мобильная экосистема для спортсменов, пауэрлифтеров и тренеров. Объединяет в себе интерактивную библиотеку тренировочных программ, гибкий дневник тренировок с подсобными упражнениями, научный калькулятор 1ПМ, дневник питания, расчет суточной нормы КБЖУ, нативную поддержку Android и iOS, а также полную автономность в условиях отсутствия интернета.
 </p>
 
+<p align="center">
+  <a href="https://github.com/Coosiks/MSLift/releases/download/v1.0.0-offline/MSLift-debug.apk">
+    <img src="https://img.shields.io/badge/Скачать-Android_APK_(v1.0.0)-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Скачать APK" />
+  </a>
+  <a href="https://github.com/Coosiks/MSLift/releases/download/v1.0.0-offline/MSLift-iOS.ipa">
+    <img src="https://img.shields.io/badge/Скачать-iOS_IPA_(v1.0.0)-000000?style=for-the-badge&logo=apple&logoColor=white" alt="Скачать iOS IPA" />
+  </a>
+  <a href="https://github.com/Coosiks/MSLift/releases/tag/v1.0.0-offline">
+    <img src="https://img.shields.io/badge/Все_релизы-GitHub_Releases-24292e?style=for-the-badge&logo=github&logoColor=white" alt="GitHub Releases" />
+  </a>
+</p>
+
 ---
 
 ## ⚡ Основные возможности
@@ -247,12 +259,19 @@ npm test
 
 ---
 
-## 📱 Сборка мобильных версий (Android & iOS)
+## 📱 Мобильные версии (Android & iOS)
 
-### Облачная автоматическая сборка (GitHub Actions CI/CD)
+### 📥 Прямые ссылки на загрузку (GitHub Releases):
+| Платформа | Формат | Ссылка | Назначение |
+| :--- | :--- | :--- | :--- |
+| **Android** | `.apk` (Standalone) | [**Скачать MSLift-debug.apk**](https://github.com/Coosiks/MSLift/releases/download/v1.0.0-offline/MSLift-debug.apk) | Прямая установка на любые смартфоны Android |
+| **iOS** | `.ipa` (App Package) | [**Скачать MSLift-iOS.ipa**](https://github.com/Coosiks/MSLift/releases/download/v1.0.0-offline/MSLift-iOS.ipa) | Установка на iPhone через AltStore, Sideloadly, TrollStore |
+| **iOS / macOS** | `.xcarchive.zip` | [**Скачать MSLift-iOS.xcarchive.zip**](https://github.com/Coosiks/MSLift/releases/download/v1.0.0-offline/MSLift-iOS.xcarchive.zip) | Открытие в Xcode, подпись сертификатом, публикация в TestFlight |
+
+### ☁️ Облачная автоматическая сборка (GitHub Actions CI/CD)
 Благодаря настроенным workflow-скриптам в `.github/workflows/`, для сборки мобильных клиентов **не требуется локально устанавливать Android Studio или владеть компьютером Mac**:
 - **Android APK**: workflow [`build-apk.yml`](.github/workflows/build-apk.yml) на runner'е Ubuntu автоматически компилирует нативный APK и публикует его в Releases.
-- **iOS IPA & Archive**: workflow [`build-ios.yml`](.github/workflows/build-ios.yml) на облачной виртуальной машине `macos-latest` с Xcode компилирует нативный iOS проект, генерирует `MSLift-unsigned.ipa` (для установки на iPhone через AltStore / Sideloadly / TrollStore) и архив `MSLift.xcarchive.zip` (для открытия в Xcode и публикации в TestFlight).
+- **iOS IPA & Archive**: workflow [`build-ios.yml`](.github/workflows/build-ios.yml) на облачной виртуальной машине `macos-latest` с Xcode компилирует нативный iOS проект, генерирует `MSLift-iOS.ipa` и архив `MSLift-iOS.xcarchive.zip`.
 
 ### Локальная сборка на машине разработчика:
 ```bash
