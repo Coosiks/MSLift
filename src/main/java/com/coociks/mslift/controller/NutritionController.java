@@ -8,6 +8,7 @@ import com.coociks.mslift.service.NutritionService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -41,7 +42,7 @@ public class NutritionController {
     )
     public ResponseEntity<DailyNutritionResponse.NutritionEntryDto> addEntry(
             @Parameter(description = "Данные записи: продукт, граммовка, дата")
-            @RequestBody NutritionEntryRequest request) {
+            @RequestBody @Valid NutritionEntryRequest request) {
         return ResponseEntity.ok(nutritionService.addEntry(request));
     }
 

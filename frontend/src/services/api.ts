@@ -6,6 +6,7 @@ import {
   generateMockProgramWeek
 } from './mockData';
 import { storage } from './storage';
+import { calculateOneRepMax } from '../utils/oneRepMax';
 import type {
   Exercise,
   WorkoutSetRequest,
@@ -114,19 +115,12 @@ export const api = {
       }
     }
     // Local calculation
-    const w = data.weight;
-    const r = data.reps;
-    let max = w;
-    if (data.formula === 'BRZYCKI') {
-      max = r === 1 ? w : Math.round(w * (36 / (37 - r)) * 10) / 10;
-    } else {
-      max = r === 1 ? w : Math.round(w * (1 + r / 30) * 10) / 10;
-    }
+    const res = calculateOneRepMax(data.weight, data.reps, data.formula);
     return {
-      oneRepMax: max,
-      formulaUsed: data.formula,
-      weight: w,
-      reps: r
+      oneRepMax: res.oneRepMax,
+      formulaUsed: res.formula,
+      weight: res.weight,
+      reps: res.reps
     };
   },
 

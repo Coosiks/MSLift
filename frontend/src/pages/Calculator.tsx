@@ -7,6 +7,12 @@ import {
 } from 'lucide-react';
 import { api } from '../services/api';
 import type { OneRepMaxResponse } from '../types';
+import {
+  calculateEpley,
+  calculateBrzycki,
+  calculateOneRepMax,
+  calculatePercentageTable
+} from '../utils/oneRepMax';
 
 export const Calculator: React.FC = () => {
   const [weight, setWeight] = useState<string>('100');
@@ -44,20 +50,10 @@ export const Calculator: React.FC = () => {
   const base1RM = result?.oneRepMax
     ? result.oneRepMax
     : weight && reps
-    ? Math.round(Number(weight) * (1 + Number(reps) / 30) * 10) / 10
+    ? calculateOneRepMax(Number(weight), Number(reps), formula).oneRepMax
     : 100;
 
-  const percentageTable = [
-    { pct: 100, reps: '1 повтор', rpe: '10' },
-    { pct: 95, reps: '2 повтора', rpe: '9.5' },
-    { pct: 90, reps: '3-4 повтора', rpe: '9' },
-    { pct: 85, reps: '5-6 повторов', rpe: '8.5' },
-    { pct: 80, reps: '7-8 повторов', rpe: '8' },
-    { pct: 75, reps: '9-10 повторов', rpe: '7.5' },
-    { pct: 70, reps: '11-12 повторов', rpe: '7' },
-    { pct: 65, reps: '13-15 повторов', rpe: '6.5' },
-    { pct: 60, reps: '16-20 повторов', rpe: '6' },
-  ];
+  const percentageTable = calculatePercentageTable(base1RM);
 
   return (
     <div className="space-y-8 animate-fade-in max-w-5xl mx-auto">
@@ -201,11 +197,11 @@ export const Calculator: React.FC = () => {
               {/* Side by side formula comparison badge */}
               <div className="bg-slate-900/80 p-3 rounded-xl border border-slate-800 space-y-1 text-right sm:text-left">
                 <div className="text-xs text-slate-400">
-                  Epley: <strong className="text-indigo-300 font-mono">{Math.round(Number(weight) * (1 + Number(reps) / 30) * 10) / 10} кг</strong>
+                  Epley: <strong className="text-indigo-300 font-mono">{calculateEpley(Number(weight), Number(reps))} кг</strong>
                 </div>
                 <div className="text-xs text-slate-400">
                   Brzycki: <strong className="text-indigo-300 font-mono">
-                    {Number(reps) < 37 ? Math.round(Number(weight) * (36 / (37 - Number(reps))) * 10) / 10 : '-'} кг
+                    {Number(reps) < 37 ? `${calculateBrzycki(Number(weight), Number(reps))} кг` : '-'}
                   </strong>
                 </div>
               </div>

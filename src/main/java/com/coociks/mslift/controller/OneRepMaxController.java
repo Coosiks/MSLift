@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -33,7 +34,7 @@ public class OneRepMaxController {
     })
     public ResponseEntity<OneRepMaxResponse> calculate1RM(
             @Parameter(description = "Данные для расчёта: вес, повторения, формула")
-            @RequestBody OneRepMaxRequest request) {
+            @RequestBody @Valid OneRepMaxRequest request) {
         
         BigDecimal oneRm;
         String formulaName;

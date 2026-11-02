@@ -11,6 +11,7 @@ import com.coociks.mslift.service.WorkoutService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -43,7 +44,7 @@ public class WorkoutController {
     )
     public ResponseEntity<WorkoutSetResponse> addSet(
             @Parameter(description = "Данные подхода: упражнение, вес, повторения, RPE")
-            @RequestBody WorkoutSetRequest request) {
+            @RequestBody @Valid WorkoutSetRequest request) {
         return ResponseEntity.ok(workoutService.addWorkoutSet(request));
     }
 
@@ -74,7 +75,7 @@ public class WorkoutController {
         summary = "Записать тренировочный день в дневник",
         description = "Сохраняет программу, базовые упражнения и добавленную подсобку"
     )
-    public ResponseEntity<TrainingDiaryResponse> addDiaryEntry(@RequestBody TrainingDiaryRequest request) {
+    public ResponseEntity<TrainingDiaryResponse> addDiaryEntry(@RequestBody @Valid TrainingDiaryRequest request) {
         return ResponseEntity.ok(workoutService.addDiaryEntry(request));
     }
 

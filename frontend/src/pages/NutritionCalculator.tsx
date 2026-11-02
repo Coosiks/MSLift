@@ -13,46 +13,13 @@ import {
   Info
 } from 'lucide-react';
 import type { NutritionTarget } from '../types';
-
-interface ActivityOption {
-  level: number;
-  multiplier: number;
-  title: string;
-  description: string;
-}
-
-const ACTIVITY_OPTIONS: ActivityOption[] = [
-  {
-    level: 1,
-    multiplier: 1.2,
-    title: 'Сидячий образ жизни',
-    description: 'Минимум движения, сидячая работа, без тренировок'
-  },
-  {
-    level: 2,
-    multiplier: 1.375,
-    title: 'Лёгкая активность',
-    description: '1–3 лёгкие тренировки в неделю, умеренная бытовая активность'
-  },
-  {
-    level: 3,
-    multiplier: 1.55,
-    title: 'Средняя активность',
-    description: '3–5 силовых тренировок в неделю (стандарт пауэрлифтера)'
-  },
-  {
-    level: 4,
-    multiplier: 1.725,
-    title: 'Высокая активность',
-    description: '5–6 тяжёлых силовых тренировок или физ. работа'
-  },
-  {
-    level: 5,
-    multiplier: 1.9,
-    title: 'Экстремальная активность',
-    description: '2 тренировки в день / тяжёлая подготовка к соревнованиям'
-  }
-];
+import {
+  ACTIVITY_OPTIONS,
+  calculateBmrMifflinStJeor,
+  calculateBmrKatchMcArdle,
+  calculateTdee,
+  calculateAllMacroPlans
+} from '../utils/nutrition';
 
 export const NutritionCalculator: React.FC = () => {
   const navigate = useNavigate();
@@ -117,49 +84,33 @@ export const NutritionCalculator: React.FC = () => {
   let leanBodyMass = 0;
 
   if (isKatchMcArdle) {
-    // Katch-McArdle formula
-    leanBodyMass = weight * (100 - parsedFat!) / 100;
-    bmr = 370 + 21.6 * leanBodyMass;
+    const katch = calculateBmrKatchMcArdle(weight, parsedFat!);
+    leanBodyMass = katch.leanBodyMass;
+    bmr = katch.bmr;
     formulaName = `Кэтча — МакАрдла (сухая масса: ${leanBodyMass.toFixed(1)} кг)`;
   } else {
-    // Mifflin - St Jeor formula
-    if (gender === 'male') {
-      bmr = 10 * weight + 6.25 * height - 5 * age + 5;
-    } else {
-      bmr = 10 * weight + 6.25 * height - 5 * age - 161;
-    }
+    bmr = calculateBmrMifflinStJeor({ gender, weight, height, age });
     formulaName = 'Миффлина — Сан-Жеора';
   }
 
-  const tdee = Math.round(bmr * selectedActivity.multiplier);
+  const tdee = calculateTdee(bmr, selectedActivity.multiplier);
   const roundedBmr = Math.round(bmr);
 
-  // 1) СБРОС ВЕСА (Дефицит 15%)
-  const deficitCalories = Math.round(tdee * 0.85);
-  const deficitProtein = Math.round(2.2 * weight);
-  const deficitFat = Math.round(0.9 * weight);
-  const deficitCarbs = Math.max(
-    0,
-    Math.round((deficitCalories - (deficitProtein * 4 + deficitFat * 9)) / 4)
-  );
+  const macroPlans = calculateAllMacroPlans(weight, tdee);
+  const deficitCalories = macroPlans.DEFICIT.calories;
+  const deficitProtein = macroPlans.DEFICIT.protein;
+  const deficitFat = macroPlans.DEFICIT.fat;
+  const deficitCarbs = macroPlans.DEFICIT.carbs;
 
-  // 2) ПОДДЕРЖАНИЕ (100%)
-  const maintCalories = tdee;
-  const maintProtein = Math.round(1.8 * weight);
-  const maintFat = Math.round(1.0 * weight);
-  const maintCarbs = Math.max(
-    0,
-    Math.round((maintCalories - (maintProtein * 4 + maintFat * 9)) / 4)
-  );
+  const maintCalories = macroPlans.MAINTENANCE.calories;
+  const maintProtein = macroPlans.MAINTENANCE.protein;
+  const maintFat = macroPlans.MAINTENANCE.fat;
+  const maintCarbs = macroPlans.MAINTENANCE.carbs;
 
-  // 3) НАБОР МАССЫ (Профицит 15%)
-  const surplusCalories = Math.round(tdee * 1.15);
-  const surplusProtein = Math.round(2.0 * weight);
-  const surplusFat = Math.round(1.0 * weight);
-  const surplusCarbs = Math.max(
-    0,
-    Math.round((surplusCalories - (surplusProtein * 4 + surplusFat * 9)) / 4)
-  );
+  const surplusCalories = macroPlans.SURPLUS.calories;
+  const surplusProtein = macroPlans.SURPLUS.protein;
+  const surplusFat = macroPlans.SURPLUS.fat;
+  const surplusCarbs = macroPlans.SURPLUS.carbs;
 
   // Target plans config
   const plans = [
