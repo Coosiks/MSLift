@@ -8,13 +8,15 @@
   <img src="https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript" />
   <img src="https://img.shields.io/badge/Vite-8.3-646CFF?style=for-the-badge&logo=vite&logoColor=white" alt="Vite" />
   <img src="https://img.shields.io/badge/PostgreSQL-16-4169E1?style=for-the-badge&logo=postgresql&logoColor=white" alt="PostgreSQL" />
+  <img src="https://img.shields.io/badge/Android-APK-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Android" />
+  <img src="https://img.shields.io/badge/iOS-15+-000000?style=for-the-badge&logo=apple&logoColor=white" alt="iOS" />
   <img src="https://img.shields.io/badge/Tests-JUnit_5_&_Vitest-25A162?style=for-the-badge&logo=vitest&logoColor=white" alt="JUnit 5 & Vitest" />
   <img src="https://img.shields.io/badge/Offline--First-Ready-10B981?style=for-the-badge&logo=pwa&logoColor=white" alt="Offline-First" />
   <img src="https://img.shields.io/badge/License-MIT-blue?style=for-the-badge" alt="MIT License" />
 </p>
 
 <p align="center">
-  <strong>MSLift</strong> — современная кроссплатформенная веб- и мобильная экосистема для спортсменов, пауэрлифтеров и тренеров. Объединяет в себе интерактивную библиотеку тренировочных программ, гибкий дневник тренировок с подсобными упражнениями, научный калькулятор 1ПМ, дневник питания, расчет суточной нормы КБЖУ и полную автономность в условиях отсутствия интернета.
+  <strong>MSLift</strong> — современная кроссплатформенная веб- и мобильная экосистема для спортсменов, пауэрлифтеров и тренеров. Объединяет в себе интерактивную библиотеку тренировочных программ, гибкий дневник тренировок с подсобными упражнениями, научный калькулятор 1ПМ, дневник питания, расчет суточной нормы КБЖУ, нативную поддержку Android и iOS, а также полную автономность в условиях отсутствия интернета.
 </p>
 
 ---
@@ -45,9 +47,10 @@
 - Расчет суточных энергозатрат (**TDEE**) с учетом коэффициента силовой активности (PAL 1.2 – 1.9).
 - Персонализированное распределение макронутриентов под 3 ключевые спортивные цели: *Сброс веса / Сушка (-15%)*, *Поддержание / Рекомпозиция*, *Набор массы (+15%)*.
 
-### 6. Мобильный опыт (Capacitor & UX)
-- Нативная сборка под Android через **Capacitor**.
-- Интеграция с **Keep-Awake** (экран не гаснет во время выполнения подходов) и **Local Notifications** (таймер отдыха между подходами с виброоткликом).
+### 6. Мобильный опыт (Capacitor: Android & iOS)
+- Нативная сборка под **Android (APK)** и **iOS (IPA / Xcode Archive)** через **Capacitor 8**.
+- Нативная адаптация под экраны iPhone с «чёлкой» и Dynamic Island (`viewport-fit=cover`, безопасные отступы `safe-area-inset`).
+- Интеграция с **Keep-Awake** (экран не гаснет во время выполнения подходов), **Local Notifications** (таймер отдыха между подходами с уведомлениями) и нативным виброоткликом **Taptic Engine / Haptics**.
 
 ### 7. Темы оформления (Dark & Light Mode)
 - Полноценная светлая и тёмная тема с сохранением предпочтения в `localStorage`.
@@ -72,7 +75,7 @@
    - При появлении сети данные синхронизируются с сервером PostgreSQL.
 4. **Аппаратные фичи для тренировочного зала**:
    - **Keep-Awake (Screen Lock)**: дисплей смартфона остается включенным во время подходов, исключая необходимость разблокировать устройство магнезированными руками.
-   - **Local Notifications**: таймер отдыха между подходами (от 1.5 до 5 минут) отправляет уведомление и виброотклик даже при свернутом приложении или заблокированном телефоне.
+   - **Local Notifications & Haptics**: таймер отдыха между подходами (от 1.5 до 5 минут) отправляет уведомление и виброотклик даже при свернутом приложении или заблокированном телефоне.
 
 ---
 
@@ -125,12 +128,15 @@
 - **Сборка**: Gradle Wrapper
 - **Утилиты**: Lombok, Docker Compose, JJWT (JSON Web Token)
 
-### Фронтенд
+### Фронтенд и мобильный стек
 - **Фреймворк**: React 19 + TypeScript
 - **Сборщик**: Vite 8.3
 - **Архитектура**: Offline-First (локальная база программ, client-side fallback для калькуляторов и дневника)
 - **Тестирование**: Vitest (покрытие калькуляторов 1ПМ и КБЖУ, формулы Эпли, Бржицки, Миффлина-Сан Жеора, Кэтча-МакАрдла)
-- **Мобильный стек**: Capacitor (@capacitor/core, @capacitor/local-notifications, @capacitor-community/keep-awake, @capacitor/preferences)
+- **Мобильный стек**: Capacitor 8
+  - **Android**: Gradle-проект (`frontend/android`)
+  - **iOS**: Swift Package Manager проект (`frontend/ios`)
+  - **Плагины**: `@capacitor/local-notifications`, `@capacitor/haptics`, `@capacitor-community/keep-awake`, `@capacitor/preferences`
 - **Стилизация**: Tailwind CSS v4 + Glassmorphism
 - **Иконки**: Lucide React
 - **Графики**: Recharts
@@ -156,7 +162,9 @@ MSLift/
 │   │       ├── application.yml   # Конфигурация приложения
 │   │       └── db/migration/     # Flyway SQL-миграции
 │   └── test/                     # Модульные, интеграционные и MockMvc тесты валидации
-├── frontend/                     # Исходный код фронтенда (React + Vite)
+├── frontend/                     # Исходный код фронтенда и мобильного приложения
+│   ├── android/                  # Нативный проект Android (Capacitor)
+│   ├── ios/                      # Нативный проект iOS (Xcode + Swift Package Manager)
 │   ├── src/
 │   │   ├── components/           # Переиспользуемые компоненты (Navbar, таймеры и др.)
 │   │   ├── context/              # Контекст темы оформления (ThemeContext)
@@ -169,7 +177,10 @@ MSLift/
 │   │   └── index.css
 │   ├── package.json
 │   └── vite.config.ts            # Конфигурация Vite & Vitest
-├── .github/workflows/ci.yml      # GitHub Actions CI (Java 21 Gradle + Vitest + Vite build)
+├── .github/workflows/
+│   ├── ci.yml                    # CI: Сборка бэкенда Java 21, Vitest тесты и фронтенд бандл
+│   ├── build-apk.yml             # CI/CD: Автоматическая сборка Android Debug APK
+│   └── build-ios.yml             # CI/CD: Облачная сборка iOS IPA и Xcode Archive на macOS
 ├── docker-compose.yml            # Сервисы Docker (PostgreSQL 16)
 ├── build.gradle                  # Gradle конфигурация
 └── README.md
@@ -232,6 +243,26 @@ npm run dev
 ```bash
 cd frontend
 npm test
+```
+
+---
+
+## 📱 Сборка мобильных версий (Android & iOS)
+
+### Облачная автоматическая сборка (GitHub Actions CI/CD)
+Благодаря настроенным workflow-скриптам в `.github/workflows/`, для сборки мобильных клиентов **не требуется локально устанавливать Android Studio или владеть компьютером Mac**:
+- **Android APK**: workflow [`build-apk.yml`](.github/workflows/build-apk.yml) на runner'е Ubuntu автоматически компилирует нативный APK и публикует его в Releases.
+- **iOS IPA & Archive**: workflow [`build-ios.yml`](.github/workflows/build-ios.yml) на облачной виртуальной машине `macos-latest` с Xcode компилирует нативный iOS проект, генерирует `MSLift-unsigned.ipa` (для установки на iPhone через AltStore / Sideloadly / TrollStore) и архив `MSLift.xcarchive.zip` (для открытия в Xcode и публикации в TestFlight).
+
+### Локальная сборка на машине разработчика:
+```bash
+cd frontend
+
+# Сборка и синхронизация для Android
+npm run build:android
+
+# Сборка и синхронизация для iOS
+npm run build:ios
 ```
 
 ---

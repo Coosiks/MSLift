@@ -1,0 +1,94 @@
+name: Build iOS App (IPA & Archive)
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-ios:
+    name: Build & Package iOS App
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install Frontend Dependencies
+        working-directory: frontend
+        run: npm install --legacy-peer-deps
+
+      - name: Build Web Production Bundle
+        working-directory: frontend
+        run: npm run build
+
+      - name: Sync Capacitor iOS
+        working-directory: frontend
+        run: npx cap sync ios
+
+      - name: Build & Archive iOS App with Xcode
+        working-directory: frontend/ios/App
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project App.xcodeproj \
+            -scheme App \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath build/MSLift.xcarchive \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            clean archive | xcbeautify || xcodebuild \
+            -project App.xcodeproj \
+            -scheme App \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath build/MSLift.xcarchive \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            clean archive
+
+      - name: Package Unsigned IPA & Zip Archive
+        run: |
+          mkdir -p final-ios/Payload
+          cp -r frontend/ios/App/build/MSLift.xcarchive/Products/Applications/App.app final-ios/Payload/
+          cd final-ios
+          zip -qr MSLift-unsigned.ipa Payload
+          cd ..
+          
+          cd frontend/ios/App/build
+          zip -qr ../../../../final-ios/MSLift.xcarchive.zip MSLift.xcarchive
+          cd ../../../..
+
+          echo "### Generated iOS Artifacts:"
+          ls -lh final-ios/
+
+      - name: Upload iOS Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: MSLift-iOS-Bundle
+          path: final-ios/*
+          if-no-files-found: error
+
+      - name: Attach iOS Assets to GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload v1.0.0-offline final-ios/MSLift-unsigned.ipa final-ios/MSLift.xcarchive.zip --clobber || {
+            echo "Release v1.0.0-offline not yet created or failed to upload, creating or updating..."
+            gh release create v1.0.0-offline final-ios/MSLift-unsigned.ipa final-ios/MSLift.xcarchive.zip \
+              --title "MSLift Mobile v1.0.0 (Offline Gym App)" \
+              --notes "Полнофункциональное мобильное приложение MSLift (Android APK и iOS IPA/XCArchive) для тренировок в зале оффлайн." || true
+          }

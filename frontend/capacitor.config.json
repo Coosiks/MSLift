@@ -4,6 +4,7 @@
   "webDir": "dist",
   "server": {
     "androidScheme": "https",
+    "iosScheme": "mslift",
     "cleartext": true
   },
   "plugins": {
@@ -11,5 +12,8 @@
       "smallIcon": "ic_launcher",
       "iconColor": "#6366f1"
     }
+  },
+  "ios": {
+    "contentInset": "always"
   }
 }
