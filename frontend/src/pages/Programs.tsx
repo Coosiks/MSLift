@@ -502,7 +502,7 @@ export const Programs: React.FC = () => {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-              {filteredPrograms.map((prog, index) => (
+              {filteredPrograms.map((prog) => (
                 <div
                   key={prog.id}
                   onClick={() => openProgram(prog)}
@@ -521,7 +521,6 @@ export const Programs: React.FC = () => {
                             : 'недель'}
                         </span>
                       </div>
-                      <span className="text-xs text-slate-600 font-mono">#{index + 1}</span>
                     </div>
 
                     <h3 className="text-lg font-bold text-white group-hover:text-indigo-300 transition-colors leading-snug">
