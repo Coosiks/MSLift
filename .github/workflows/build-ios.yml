@@ -60,16 +60,17 @@ jobs:
             CODE_SIGN_IDENTITY="" \
             clean archive
 
-      - name: Package Unsigned IPA & Zip Archive
+      - name: Package iOS IPA & Zip Archive
         run: |
           mkdir -p final-ios/Payload
           cp -r frontend/ios/App/build/MSLift.xcarchive/Products/Applications/App.app final-ios/Payload/
           cd final-ios
-          zip -qr MSLift-unsigned.ipa Payload
+          zip -qr MSLift-iOS.ipa Payload
+          cp MSLift-iOS.ipa MSLift-unsigned.ipa
           cd ..
           
           cd frontend/ios/App/build
-          zip -qr ../../../../final-ios/MSLift.xcarchive.zip MSLift.xcarchive
+          zip -qr ../../../../final-ios/MSLift-iOS.xcarchive.zip MSLift.xcarchive
           cd ../../../..
 
           echo "### Generated iOS Artifacts:"
@@ -86,9 +87,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release upload v1.0.0-offline final-ios/MSLift-unsigned.ipa final-ios/MSLift.xcarchive.zip --clobber || {
-            echo "Release v1.0.0-offline not yet created or failed to upload, creating or updating..."
-            gh release create v1.0.0-offline final-ios/MSLift-unsigned.ipa final-ios/MSLift.xcarchive.zip \
-              --title "MSLift Mobile v1.0.0 (Offline Gym App)" \
-              --notes "Полнофункциональное мобильное приложение MSLift (Android APK и iOS IPA/XCArchive) для тренировок в зале оффлайн." || true
-          }
+          gh release upload v1.0.0-offline final-ios/MSLift-iOS.ipa final-ios/MSLift-iOS.xcarchive.zip --clobber || \
+          gh release create v1.0.0-offline final-ios/MSLift-iOS.ipa final-ios/MSLift-iOS.xcarchive.zip \
+            --title "MSLift Mobile v1.0.0 (Offline Gym App: Android & iOS)" \
+            --notes "Полнофункциональное мобильное приложение MSLift для тренировок в зале оффлайн. Доступны нативный Android APK и iOS IPA." || true

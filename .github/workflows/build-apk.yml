@@ -105,14 +105,12 @@ jobs:
           path: final-apk/MSLift-debug.apk
           if-no-files-found: error
 
-      - name: Publish Direct Download Release
+      - name: Publish or Update Direct Download Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release delete v1.0.0-offline --yes || true
-          git tag -d v1.0.0-offline || true
-          git push origin :refs/tags/v1.0.0-offline || true
+          gh release upload v1.0.0-offline final-apk/MSLift-debug.apk --clobber || \
           gh release create v1.0.0-offline final-apk/MSLift-debug.apk \
-            --title "MSLift Mobile v1.0.0 (Offline Gym APK)" \
-            --notes "Полнофункциональный standalone Android APK для тренировок в зале оффлайн. Включает 40+ программ (1020 тренировок), таймер отдыха с пуш-уведомлениями и виброоткликом, ведение дневника без интернета." || true
+            --title "MSLift Mobile v1.0.0 (Offline Gym App: Android & iOS)" \
+            --notes "Полнофункциональное мобильное приложение MSLift для тренировок в зале оффлайн. Доступны нативный Android APK и iOS IPA." || true
 
