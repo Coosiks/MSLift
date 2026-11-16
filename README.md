@@ -1,4 +1,4 @@
-# 🏋️‍♂️ MSLift — Полнофункциональная экосистема для силовых видов спорта и пауэрлифтинга
+#  MSLift — Полнофункциональная экосистема для силовых видов спорта и пауэрлифтинга
 
 <p align="center">
   <img src="https://img.shields.io/badge/Java-21_LTS-orange?style=for-the-badge&logo=openjdk&logoColor=white" alt="Java 21" />
@@ -33,7 +33,7 @@
 
 ---
 
-## ⚡ Основные возможности
+##  Основные возможности
 
 ### 1. Библиотека тренировочных программ (30+ программ)
 - Каталог классических и современных циклов: программы **Б.И. Шейко**, **А. Фалеева**, **В. Муравьёва**, **Л. Остапенко**, **Wendler 5/3/1**, **Candito 6-Week**, **Texas Method**, **Смолова**, **Воробьёва** и др.
@@ -70,7 +70,7 @@
 
 ---
 
-## 🌐 Архитектура Offline-First и автономность в зале
+##  Архитектура Offline-First и автономность в зале
 
 Специфика силового спорта и пауэрлифтинга такова, что тренировки регулярно проходят в **подвальных помещениях, полуподвалах или специализированных залах с железобетонными перекрытиями**, где мобильная сеть и Wi-Fi сигнал либо крайне нестабильны, либо полностью отсутствуют.
 
@@ -91,7 +91,7 @@
 
 ---
 
-## 📖 Интерактивная документация API (Swagger / OpenAPI 3.0) и серверная валидация
+##  Интерактивная документация API (Swagger / OpenAPI 3.0) и серверная валидация
 
 Архитектура REST API бэкенда спроектирована по строгим стандартам промышленной разработки:
 
@@ -127,7 +127,7 @@
 
 ---
 
-## 🛠 Технологический стек
+##  Технологический стек
 
 ### Бэкенд
 - **Язык**: Java 21 (LTS)
@@ -156,7 +156,7 @@
 
 ---
 
-## 📁 Структура репозитория
+##  Структура репозитория
 
 ```text
 MSLift/
@@ -200,7 +200,7 @@ MSLift/
 
 ---
 
-## 🚀 Быстрый старт
+##  Быстрый старт
 
 ### Требования
 - **Java**: 21 LTS (OpenJDK 21 / Eclipse Temurin)
@@ -271,16 +271,16 @@ E2E-тесты проверяют ключевые offline-first сценари�
 
 ---
 
-## 📱 Мобильные версии (Android & iOS)
+##  Мобильные версии (Android & iOS)
 
-### 📥 Прямые ссылки на загрузку (GitHub Releases):
+###  Прямые ссылки на загрузку (GitHub Releases):
 | Платформа | Формат | Ссылка | Назначение |
 | :--- | :--- | :--- | :--- |
 | **Android** | `.apk` (Standalone) | [**Скачать MSLift-debug.apk**](https://github.com/Coosiks/MSLift/releases/download/v1.0.0-offline/MSLift-debug.apk) | Прямая установка на любые смартфоны Android |
 | **iOS** | `.ipa` (App Package) | [**Скачать MSLift-iOS.ipa**](https://github.com/Coosiks/MSLift/releases/download/v1.0.0-offline/MSLift-iOS.ipa) | Установка на iPhone через AltStore, Sideloadly, TrollStore |
 | **iOS / macOS** | `.xcarchive.zip` | [**Скачать MSLift-iOS.xcarchive.zip**](https://github.com/Coosiks/MSLift/releases/download/v1.0.0-offline/MSLift-iOS.xcarchive.zip) | Открытие в Xcode, подпись сертификатом, публикация в TestFlight |
 
-### ☁️ Облачная автоматическая сборка (GitHub Actions CI/CD)
+###  Облачная автоматическая сборка (GitHub Actions CI/CD)
 Благодаря настроенным workflow-скриптам в `.github/workflows/`, для сборки мобильных клиентов **не требуется локально устанавливать Android Studio или владеть компьютером Mac**:
 - **Android APK**: workflow [`build-apk.yml`](.github/workflows/build-apk.yml) на runner'е Ubuntu автоматически компилирует нативный APK и публикует его в Releases.
 - **iOS IPA & Archive**: workflow [`build-ios.yml`](.github/workflows/build-ios.yml) на облачной виртуальной машине `macos-latest` с Xcode компилирует нативный iOS проект, генерирует `MSLift-iOS.ipa` и архив `MSLift-iOS.xcarchive.zip`.
@@ -298,7 +298,7 @@ npm run build:ios
 
 ---
 
-## 📡 Ключевые REST API Эндпоинты
+##  Ключевые REST API Эндпоинты
 
 | Метод | URL | Описание | Валидация |
 | :--- | :--- | :--- | :--- |
@@ -318,7 +318,7 @@ npm run build:ios
 
 ---
 
-## 📝 Соглашение о коммитах (IT Git Etiquette)
+##  Соглашение о коммитах (IT Git Etiquette)
 
 В проекте принято соглашение [Conventional Commits](https://www.conventionalcommits.org/):
 - `feat:` — добавление новой функциональности
@@ -331,7 +331,7 @@ npm run build:ios
 
 ---
 
-## 📄 Лицензия и отказ от ответственности
+##  Лицензия и отказ от ответственности
 
 ### 1. Лицензия (MIT License)
 Проект распространяется под открытой лицензией [MIT](LICENSE).  
